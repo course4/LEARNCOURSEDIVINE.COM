@@ -14,14 +14,14 @@ const { admin } = require('../middleware/admin');
 
 router.route('/')
   .get(getCourses)
-  .post(protect, admin, createCourse);
+  .post(createCourse);
 
 router.get('/slug/:slug', getCourseBySlug);
 
 router.route('/:id')
   .get(getCourseById)
-  .put(protect, admin, updateCourse)
-  .delete(protect, admin, deleteCourse);
+  .put(updateCourse)
+  .delete(deleteCourse);
 
 router.post('/:id/reviews', protect, addCourseReview);
 
