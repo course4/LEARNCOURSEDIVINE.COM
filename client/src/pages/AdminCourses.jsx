@@ -237,6 +237,26 @@ const AdminCourses = () => {
     }
   };
 
+  const handleClearAllCourses = async () => {
+    if (!window.confirm('Are you sure you want to delete ALL courses from the website and database? This cannot be undone.')) {
+      return;
+    }
+
+    try {
+      localStorage.setItem('cd_custom_courses', JSON.stringify([]));
+      localStorage.setItem('cd_deleted_course_ids', JSON.stringify([]));
+      
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: [] }));
+      }
+      
+      loadCourses();
+      showToast('All courses removed. Database and catalog are clean.', 'info');
+    } catch (err) {
+      showToast('Failed to clear courses', 'error');
+    }
+  };
+
   const filteredCourses = courses.filter((c) =>
     (c.title || '').toLowerCase().includes(search.toLowerCase()) ||
     (c.category || '').toLowerCase().includes(search.toLowerCase())
@@ -265,6 +285,15 @@ const AdminCourses = () => {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
+          {courses.length > 0 && (
+            <button
+              onClick={handleClearAllCourses}
+              className="px-3.5 py-2.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs shadow-sm transition flex items-center gap-1.5"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Clear All Courses
+            </button>
+          )}
+
           <button
             onClick={() => setShowBulkModal(true)}
             className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-sm transition flex items-center gap-2"
