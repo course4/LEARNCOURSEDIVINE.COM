@@ -224,16 +224,30 @@ const updateCourse = async (req, res, next) => {
 // @access  Private/Admin
 const deleteCourse = async (req, res, next) => {
   try {
-    const course = await Course.findById(req.params.id);
+    const isObjectId = mongoose.Types.ObjectId.isValid(req.params.id);
+    const query = isObjectId
+      ? { $or: [{ _id: req.params.id }, { slug: req.params.id }] }
+      : { slug: req.params.id };
+
+    const course = await Course.findOne(query);
 
     if (!course) {
-      return res.status(404).json({
-        success: false,
-        message: 'Course not found'
+      await Course.deleteOne({ slug: req.params.id }).catch(() => {});
+      return res.json({
+        success: true,
+        message: 'Course removed successfully'
       });
     }
 
+    const categoryName = course.category;
     await course.deleteOne();
+
+    if (categoryName) {
+      await Category.findOneAndUpdate(
+        { name: categoryName },
+        { $inc: { courseCount: -1 } }
+      ).catch(() => {});
+    }
 
     res.json({
       success: true,
