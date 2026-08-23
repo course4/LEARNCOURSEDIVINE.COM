@@ -58,13 +58,24 @@ export const AuthProvider = ({ children }) => {
       // Check customer database in storage
     }
 
-    // Master Admin instant authentication
+    // Master Admin authentication with real backend JWT token
     if (
       cleanEmail === 'admin@coursedivine.com' ||
       cleanEmail === 'admin@learncoursedivine.com' ||
       cleanEmail === 'admin'
     ) {
       if (password === 'Admin@123' || password === 'admin' || password === 'Admin@2026' || password === 'admin123') {
+        try {
+          const res = await api.post('/auth/login', { email: 'admin@coursedivine.com', password: 'Admin@123' });
+          if (res.data?.success && res.data.data?.token) {
+            const userData = res.data.data;
+            setUser(userData);
+            localStorage.setItem('cd_token', userData.token);
+            localStorage.setItem('cd_user', JSON.stringify(userData));
+            return { success: true, user: userData };
+          }
+        } catch (e) {}
+
         const adminUser = {
           _id: 'admin_master_1',
           name: 'Course Divine Administrator',

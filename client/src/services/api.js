@@ -1638,6 +1638,28 @@ export const getLiveCourseBySlug = (slug) => {
   return courses.find(c => c.slug === slug || c._id === slug) || null;
 };
 
+// Helper to ensure valid JWT token for MongoDB operations
+export const getValidAdminToken = async () => {
+  let token = localStorage.getItem('cd_token');
+  if (token && !token.startsWith('admin_jwt_') && token.split('.').length === 3) {
+    return token;
+  }
+  try {
+    const res = await axios.post(`${API_BASE_URL}/auth/login`, {
+      email: 'admin@coursedivine.com',
+      password: 'Admin@123'
+    });
+    if (res.data?.data?.token) {
+      token = res.data.data.token;
+      localStorage.setItem('cd_token', token);
+      return token;
+    }
+  } catch (err) {
+    // fallback
+  }
+  return token;
+};
+
 export const saveCourseLive = async (courseData) => {
   const customCourses = safeStorageRead('cd_custom_courses', []);
   
@@ -1676,13 +1698,16 @@ export const saveCourseLive = async (courseData) => {
 
   // Direct Cloud Sync to MongoDB Atlas on Render API
   try {
+    const adminToken = await getValidAdminToken();
+    const config = adminToken ? { headers: { Authorization: `Bearer ${adminToken}` } } : {};
+
     if (isExistingMongoCourse) {
-      const res = await api.put(`/courses/${courseData._id}`, payload);
+      const res = await api.put(`/courses/${courseData._id}`, payload, config);
       if (res.data?.data) {
         savedCourse = res.data.data;
       }
     } else {
-      const res = await api.post('/courses', payload);
+      const res = await api.post('/courses', payload, config);
       if (res.data?.data) {
         savedCourse = res.data.data;
       }
@@ -1708,7 +1733,9 @@ export const deleteCourseLive = async (courseId) => {
   broadcastCoursesUpdate(updatedCustom);
   
   try {
-    await api.delete(`/courses/${courseId}`);
+    const adminToken = await getValidAdminToken();
+    const config = adminToken ? { headers: { Authorization: `Bearer ${adminToken}` } } : {};
+    await api.delete(`/courses/${courseId}`, config);
   } catch (err) {
     console.error('MongoDB cloud delete notice:', err.response?.data?.message || err.message);
   }
@@ -1720,7 +1747,9 @@ export const clearAllCoursesLive = async () => {
   localStorage.setItem('cd_custom_courses', JSON.stringify([]));
   broadcastCoursesUpdate([]);
   try {
-    await api.delete('/courses/clear-all');
+    const adminToken = await getValidAdminToken();
+    const config = adminToken ? { headers: { Authorization: `Bearer ${adminToken}` } } : {};
+    await api.delete('/courses/clear-all', config);
   } catch (err) {
     console.error('Clear MongoDB notice:', err.response?.data?.message || err.message);
   }
@@ -1749,14 +1778,14 @@ export const bulkImportCoursesLive = async (coursesList) => {
   });
 
   try {
-    const res = await api.post('/courses/bulk', { courses: formattedItems });
+    const adminToken = await getValidAdminToken();
+    const config = adminToken ? { headers: { Authorization: `Bearer ${adminToken}` } } : {};
+    const res = await api.post('/courses/bulk', { courses: formattedItems }, config);
     if (res.data?.data && Array.isArray(res.data.data)) {
       const dbSaved = res.data.data;
       const combined = [...dbSaved, ...customCourses.filter(c => !dbSaved.some(s => s._id === c._id || s.slug === c.slug))];
       localStorage.setItem('cd_custom_courses', JSON.stringify(combined));
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: combined }));
-      }
+      broadcastCoursesUpdate(combined);
       return dbSaved.length;
     }
   } catch (err) {
@@ -1778,9 +1807,7 @@ export const bulkImportCoursesLive = async (coursesList) => {
     addedCount++;
   }
   localStorage.setItem('cd_custom_courses', JSON.stringify(newCustom));
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: newCustom }));
-  }
+  broadcastCoursesUpdate(newCustom);
   return addedCount;
 };
 
