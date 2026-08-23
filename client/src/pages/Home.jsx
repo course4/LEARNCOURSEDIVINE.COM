@@ -49,7 +49,7 @@ import {
   Sliders,
   Workflow
 } from 'lucide-react';
-import api, { fallbackStore, getLiveCourses } from '../services/api';
+import api, { fallbackStore, getLiveCourses, fetchLiveCoursesFromApi } from '../services/api';
 import { useNotification } from '../context/NotificationContext';
 import CourseCard from '../components/CourseCard';
 import EnrollmentModal from '../components/EnrollmentModal';
@@ -154,10 +154,10 @@ const Home = () => {
 
     syncCourses();
 
-    api.get('/courses?limit=12')
-      .then((res) => {
-        if (res.data?.success && res.data.data.length > 0) {
-          setCourses(res.data.data);
+    fetchLiveCoursesFromApi()
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setCourses(data);
         }
       })
       .catch(() => {

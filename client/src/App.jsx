@@ -116,7 +116,13 @@ class GlobalErrorBoundary extends React.Component {
   }
 }
 
+import { fetchLiveCoursesFromApi } from './services/api';
+
 function App() {
+  useEffect(() => {
+    fetchLiveCoursesFromApi().catch(() => {});
+  }, []);
+
   return (
     <GlobalErrorBoundary>
       <Router>
