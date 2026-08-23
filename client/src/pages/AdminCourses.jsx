@@ -104,6 +104,35 @@ const AdminCourses = () => {
     reader.readAsDataURL(file);
   };
 
+  // Handle Course Image File Upload from Computer
+  const handleImageFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('Please upload a valid image file (JPG, PNG, WebP)', 'error');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Image size should be less than 5MB', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setFormData((prev) => ({
+        ...prev,
+        thumbnail: event.target?.result
+      }));
+      showToast('Course image attached successfully!', 'success');
+    };
+    reader.onerror = () => {
+      showToast('Error reading image file', 'error');
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleDelete = async (courseId, courseTitle) => {
     if (!window.confirm(`Are you sure you want to permanently delete "${courseTitle}"? It will be removed immediately from the entire website.`)) {
       return;
@@ -668,15 +697,73 @@ const AdminCourses = () => {
                 />
               </div>
 
-              {/* Thumbnail URL */}
-              <div>
-                <label className="block font-bold text-slate-800 mb-1">Thumbnail Image URL</label>
-                <input
-                  type="url"
-                  value={formData.thumbnail}
-                  onChange={(e) => setFormData({ ...formData, thumbnail: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                />
+              {/* Course Thumbnail Image (Google Images URL / Upload File + Live Preview) */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block font-bold text-slate-900 text-xs">
+                    🖼️ Course Thumbnail Image
+                  </label>
+                  {formData.thumbnail && (
+                    <span className="text-[11px] text-emerald-600 font-bold flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Image Attached
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-[11px] text-slate-500">
+                  Search on Google for this course, right-click the image and select <strong>"Copy image address"</strong>, then paste it below. Or upload an image from your computer.
+                </p>
+
+                <div className="space-y-2">
+                  <input
+                    type="url"
+                    value={formData.thumbnail && !formData.thumbnail.startsWith('data:') ? formData.thumbnail : ''}
+                    onChange={(e) => setFormData({ ...formData, thumbnail: e.target.value })}
+                    placeholder="Paste Google Image address / URL here (e.g. https://...)"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none bg-white"
+                  />
+
+                  <div className="flex items-center gap-3 pt-1">
+                    <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold text-xs shadow-sm transition">
+                      <Upload className="w-4 h-4 text-brand-600" />
+                      <span>{formData.thumbnail ? 'Change Image File' : 'Upload Image from Computer'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageFileUpload}
+                        className="hidden"
+                      />
+                    </label>
+
+                    {formData.thumbnail && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, thumbnail: '' })}
+                        className="text-xs text-rose-600 hover:underline font-bold"
+                      >
+                        Remove Image
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Live Image Preview Card */}
+                {formData.thumbnail && (
+                  <div className="pt-2">
+                    <div className="text-[11px] font-bold text-slate-600 mb-1.5">Live Image Preview:</div>
+                    <div className="w-48 h-28 rounded-xl overflow-hidden border-2 border-brand-500/40 shadow-sm bg-slate-900 relative">
+                      <img
+                        src={formData.thumbnail}
+                        alt="Course Preview"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80';
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Submit Buttons */}
