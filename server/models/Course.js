@@ -75,8 +75,7 @@ const courseSchema = new mongoose.Schema(
     },
     level: {
       type: String,
-      enum: ['Beginner', 'Intermediate', 'Advanced', 'All Levels'],
-      default: 'Beginner'
+      default: 'Beginner to Advanced'
     },
     language: {
       type: String,
@@ -84,8 +83,7 @@ const courseSchema = new mongoose.Schema(
     },
     duration: {
       type: String,
-      required: true,
-      default: '40 Hours'
+      default: '80 Hours (10 Weeks)'
     },
     totalLectures: {
       type: Number,
@@ -94,21 +92,29 @@ const courseSchema = new mongoose.Schema(
     price: {
       type: Number,
       required: true,
-      default: 4999
+      default: 499
     },
     discountPrice: {
       type: Number,
-      default: 2499
+      default: 399
     },
     rating: {
       type: Number,
-      default: 4.8,
+      default: 4.9,
       min: 0,
       max: 5
     },
     numReviews: {
       type: Number,
       default: 120
+    },
+    syllabusPdf: {
+      type: String,
+      default: ''
+    },
+    pdfFileName: {
+      type: String,
+      default: ''
     },
     isFeatured: {
       type: Boolean,
