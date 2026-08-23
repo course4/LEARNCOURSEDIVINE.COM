@@ -25,6 +25,7 @@ import api, {
   fetchLiveCoursesFromApi,
   saveCourseLive,
   deleteCourseLive,
+  clearAllCoursesLive,
   bulkImportCoursesLive
 } from '../services/api';
 import { useNotification } from '../context/NotificationContext';
@@ -272,13 +273,7 @@ const AdminCourses = () => {
     }
 
     try {
-      localStorage.setItem('cd_custom_courses', JSON.stringify([]));
-      localStorage.setItem('cd_deleted_course_ids', JSON.stringify([]));
-      
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: [] }));
-      }
-      
+      await clearAllCoursesLive();
       loadCourses();
       showToast('All courses removed. Database and catalog are clean.', 'info');
     } catch (err) {

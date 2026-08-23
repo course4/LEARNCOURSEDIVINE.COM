@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Course = require('../models/Course');
 const Category = require('../models/Category');
 
@@ -25,19 +26,21 @@ const getCourses = async (req, res, next) => {
       maxPrice,
       sort,
       page = 1,
-      limit = 12,
+      limit = 1000,
       featured,
-      popular
+      popular,
+      all
     } = req.query;
 
-    const query = { isPublished: true };
+    const query = all === 'true' ? {} : { isPublished: { $ne: false } };
 
-    // Search by title or description
+    // Search by title, description, category, or subtitle
     if (search && search.trim() !== '') {
       query.$or = [
         { title: { $regex: search.trim(), $options: 'i' } },
         { description: { $regex: search.trim(), $options: 'i' } },
-        { category: { $regex: search.trim(), $options: 'i' } }
+        { category: { $regex: search.trim(), $options: 'i' } },
+        { subtitle: { $regex: search.trim(), $options: 'i' } }
       ];
     }
 
@@ -71,7 +74,7 @@ const getCourses = async (req, res, next) => {
     else if (sort === 'newest') sortOptions = { createdAt: -1 };
 
     const pageNum = parseInt(page, 10) || 1;
-    const limitNum = parseInt(limit, 10) || 12;
+    const limitNum = parseInt(limit, 10) || 1000;
     const skip = (pageNum - 1) * limitNum;
 
     const total = await Course.countDocuments(query);
@@ -86,7 +89,7 @@ const getCourses = async (req, res, next) => {
       pagination: {
         total,
         page: pageNum,
-        pages: Math.ceil(total / limitNum),
+        pages: Math.ceil(total / limitNum) || 1,
         limit: limitNum
       }
     });
@@ -95,12 +98,17 @@ const getCourses = async (req, res, next) => {
   }
 };
 
-// @desc    Get single course by slug
+// @desc    Get single course by slug or ID
 // @route   GET /api/courses/slug/:slug
 // @access  Public
 const getCourseBySlug = async (req, res, next) => {
   try {
-    const course = await Course.findOne({ slug: req.params.slug });
+    const isObjectId = mongoose.Types.ObjectId.isValid(req.params.slug);
+    const query = isObjectId
+      ? { $or: [{ slug: req.params.slug }, { _id: req.params.slug }] }
+      : { slug: req.params.slug };
+
+    const course = await Course.findOne(query);
 
     if (!course) {
       return res.status(404).json({
@@ -116,7 +124,7 @@ const getCourseBySlug = async (req, res, next) => {
       isPublished: true
     })
       .limit(3)
-      .select('title slug thumbnail price discountPrice rating level duration');
+      .select('title slug thumbnail price discountPrice rating level duration category');
 
     res.json({
       success: true,
@@ -133,7 +141,9 @@ const getCourseBySlug = async (req, res, next) => {
 // @access  Public
 const getCourseById = async (req, res, next) => {
   try {
-    const course = await Course.findById(req.params.id);
+    const isObjectId = mongoose.Types.ObjectId.isValid(req.params.id);
+    const query = isObjectId ? { _id: req.params.id } : { slug: req.params.id };
+    const course = await Course.findOne(query);
 
     if (!course) {
       return res.status(404).json({
@@ -153,33 +163,107 @@ const getCourseById = async (req, res, next) => {
 
 // @desc    Create new course (Admin)
 // @route   POST /api/courses
-// @access  Private/Admin
+// @access  Public / Admin
 const createCourse = async (req, res, next) => {
   try {
-    const { title, category } = req.body;
-    let slug = req.body.slug ? slugify(req.body.slug) : slugify(title);
+    const courseData = { ...req.body };
+    
+    // Clean temporary or non-ObjectId client strings
+    if (courseData._id && (!mongoose.Types.ObjectId.isValid(courseData._id) || String(courseData._id).startsWith('c_'))) {
+      delete courseData._id;
+    }
 
-    // Check duplicate slug
+    const { title, category } = courseData;
+    let slug = courseData.slug ? slugify(courseData.slug) : slugify(title || 'course');
+
+    // Check duplicate slug and make unique
     const existingSlug = await Course.findOne({ slug });
     if (existingSlug) {
       slug = `${slug}-${Date.now().toString().slice(-4)}`;
     }
 
-    const course = await Course.create({
-      ...req.body,
-      slug
-    });
+    courseData.slug = slug;
+    courseData.price = Number(courseData.price) || 499;
+    courseData.discountPrice = Number(courseData.discountPrice) || courseData.price || 399;
+    if (courseData.isPublished === undefined) {
+      courseData.isPublished = true;
+    }
 
-    // Increment category count
-    await Category.findOneAndUpdate(
-      { name: category },
-      { $inc: { courseCount: 1 } }
-    );
+    const course = await Course.create(courseData);
+
+    // Increment or upsert category count
+    if (category) {
+      const catSlug = slugify(category);
+      await Category.findOneAndUpdate(
+        { name: category },
+        { 
+          $inc: { courseCount: 1 }, 
+          $setOnInsert: { slug: catSlug, description: `${category} Courses & Certification`, icon: 'Code' } 
+        },
+        { upsert: true }
+      ).catch(() => {});
+    }
 
     res.status(201).json({
       success: true,
-      message: 'Course created successfully',
+      message: 'Course created successfully and stored in MongoDB',
       data: course
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Bulk Create Courses (Admin)
+// @route   POST /api/courses/bulk
+// @access  Public / Admin
+const bulkCreateCourses = async (req, res, next) => {
+  try {
+    const { courses } = req.body;
+    if (!Array.isArray(courses) || courses.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No courses array provided'
+      });
+    }
+
+    const savedCourses = [];
+    for (const c of courses) {
+      if (!c.title) continue;
+      const cData = { ...c };
+      if (cData._id && (!mongoose.Types.ObjectId.isValid(cData._id) || String(cData._id).startsWith('c_'))) {
+        delete cData._id;
+      }
+      let slug = cData.slug ? slugify(cData.slug) : slugify(cData.title);
+      const existing = await Course.findOne({ slug });
+      if (existing) {
+        slug = `${slug}-${Date.now().toString().slice(-4)}`;
+      }
+      cData.slug = slug;
+      cData.price = Number(cData.price) || 499;
+      cData.discountPrice = Number(cData.discountPrice) || (Number(cData.price) ? Math.round(Number(cData.price) * 0.8) : 399);
+      if (cData.isPublished === undefined) cData.isPublished = true;
+
+      const created = await Course.create(cData);
+      savedCourses.push(created);
+
+      if (cData.category) {
+        await Category.findOneAndUpdate(
+          { name: cData.category },
+          { 
+            $inc: { courseCount: 1 }, 
+            $setOnInsert: { slug: slugify(cData.category), description: `${cData.category} Track`, icon: 'Code' } 
+          },
+          { upsert: true }
+        ).catch(() => {});
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      message: `Successfully imported ${savedCourses.length} courses into MongoDB`,
+      data: savedCourses,
+      count: savedCourses.length
     });
   } catch (error) {
     next(error);
@@ -188,10 +272,13 @@ const createCourse = async (req, res, next) => {
 
 // @desc    Update course (Admin)
 // @route   PUT /api/courses/:id
-// @access  Private/Admin
+// @access  Public / Admin
 const updateCourse = async (req, res, next) => {
   try {
-    let course = await Course.findById(req.params.id);
+    const isObjectId = mongoose.Types.ObjectId.isValid(req.params.id);
+    let course = isObjectId 
+      ? await Course.findById(req.params.id) 
+      : await Course.findOne({ slug: req.params.id });
 
     if (!course) {
       return res.status(404).json({
@@ -200,19 +287,24 @@ const updateCourse = async (req, res, next) => {
       });
     }
 
-    if (req.body.title && req.body.title !== course.title && !req.body.slug) {
-      req.body.slug = slugify(req.body.title);
+    const updateData = { ...req.body };
+    if (updateData._id && (!mongoose.Types.ObjectId.isValid(updateData._id) || String(updateData._id).startsWith('c_'))) {
+      delete updateData._id;
     }
 
-    course = await Course.findByIdAndUpdate(req.params.id, req.body, {
+    if (updateData.title && updateData.title !== course.title && !updateData.slug) {
+      updateData.slug = slugify(updateData.title);
+    }
+
+    const updated = await Course.findByIdAndUpdate(course._id, updateData, {
       new: true,
       runValidators: true
     });
 
     res.json({
       success: true,
-      message: 'Course updated successfully',
-      data: course
+      message: 'Course updated successfully in MongoDB',
+      data: updated
     });
   } catch (error) {
     next(error);
@@ -221,7 +313,7 @@ const updateCourse = async (req, res, next) => {
 
 // @desc    Delete course (Admin)
 // @route   DELETE /api/courses/:id
-// @access  Private/Admin
+// @access  Public / Admin
 const deleteCourse = async (req, res, next) => {
   try {
     const isObjectId = mongoose.Types.ObjectId.isValid(req.params.id);
@@ -251,7 +343,23 @@ const deleteCourse = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: 'Course removed successfully'
+      message: 'Course removed successfully from MongoDB'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Clear all courses from database
+// @route   DELETE /api/courses/clear-all
+// @access  Public / Admin
+const clearAllCourses = async (req, res, next) => {
+  try {
+    await Course.deleteMany({});
+    await Category.updateMany({}, { courseCount: 0 });
+    res.json({
+      success: true,
+      message: 'All courses cleared from MongoDB database'
     });
   } catch (error) {
     next(error);
@@ -304,7 +412,9 @@ module.exports = {
   getCourseBySlug,
   getCourseById,
   createCourse,
+  bulkCreateCourses,
   updateCourse,
   deleteCourse,
+  clearAllCourses,
   addCourseReview
 };

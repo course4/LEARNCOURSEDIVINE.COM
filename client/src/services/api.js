@@ -1592,40 +1592,53 @@ export const getLiveCourseBySlug = (slug) => {
 export const saveCourseLive = async (courseData) => {
   const customCourses = safeStorageRead('cd_custom_courses', []);
   
-  const id = courseData._id || 'c_' + Date.now();
+  const isExistingMongoCourse = courseData._id && !String(courseData._id).startsWith('c_') && /^[0-9a-fA-F]{24}$/.test(courseData._id);
   const slug = courseData.slug || courseData.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
   
-  const formattedCourse = {
+  const payload = {
     ...courseData,
-    _id: id,
-    slug: slug,
+    slug,
+    isPublished: courseData.isPublished !== undefined ? courseData.isPublished : true,
+    price: Number(courseData.price) || 499,
+    discountPrice: Number(courseData.discountPrice) || Number(courseData.price) || 399
+  };
+
+  // Strip temporary string _id so MongoDB generates a valid ObjectId
+  if (!isExistingMongoCourse) {
+    delete payload._id;
+  }
+  
+  let savedCourse = {
+    ...courseData,
+    _id: courseData._id || 'c_' + Date.now(),
+    slug,
     isPublished: courseData.isPublished !== undefined ? courseData.isPublished : true,
     updatedAt: new Date().toISOString()
   };
   
-  // Direct Cloud Sync to MongoDB Atlas on Render
+  // Direct Cloud Sync to MongoDB Atlas on Render API
   try {
-    if (courseData._id && !courseData._id.startsWith('c_')) {
-      const res = await api.put(`/courses/${courseData._id}`, formattedCourse);
+    if (isExistingMongoCourse) {
+      const res = await api.put(`/courses/${courseData._id}`, payload);
       if (res.data?.data) {
-        Object.assign(formattedCourse, res.data.data);
+        savedCourse = res.data.data;
       }
     } else {
-      const res = await api.post('/courses', formattedCourse);
+      const res = await api.post('/courses', payload);
       if (res.data?.data) {
-        Object.assign(formattedCourse, res.data.data);
+        savedCourse = res.data.data;
       }
     }
   } catch (err) {
-    console.error('MongoDB cloud sync warning:', err.message);
+    console.error('MongoDB cloud sync warning:', err.response?.data?.message || err.message);
   }
   
   // Add or update in custom courses
-  const existingIdx = customCourses.findIndex(c => c._id === formattedCourse._id || c.slug === formattedCourse.slug);
+  const existingIdx = customCourses.findIndex(c => c._id === savedCourse._id || c.slug === savedCourse.slug);
   if (existingIdx >= 0) {
-    customCourses[existingIdx] = formattedCourse;
+    customCourses[existingIdx] = savedCourse;
   } else {
-    customCourses.unshift(formattedCourse);
+    customCourses.unshift(savedCourse);
   }
   localStorage.setItem('cd_custom_courses', JSON.stringify(customCourses));
   
@@ -1633,7 +1646,7 @@ export const saveCourseLive = async (courseData) => {
     window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: customCourses }));
   }
   
-  return formattedCourse;
+  return savedCourse;
 };
 
 export const deleteCourseLive = async (courseId) => {
@@ -1648,9 +1661,22 @@ export const deleteCourseLive = async (courseId) => {
   try {
     await api.delete(`/courses/${courseId}`);
   } catch (err) {
-    console.error('MongoDB cloud delete warning:', err.message);
+    console.error('MongoDB cloud delete warning:', err.response?.data?.message || err.message);
   }
   
+  return true;
+};
+
+export const clearAllCoursesLive = async () => {
+  localStorage.setItem('cd_custom_courses', JSON.stringify([]));
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: [] }));
+  }
+  try {
+    await api.delete('/courses/clear-all');
+  } catch (err) {
+    console.error('Clear MongoDB warning:', err.response?.data?.message || err.message);
+  }
   return true;
 };
 
@@ -1659,36 +1685,44 @@ export const bulkImportCoursesLive = async (coursesList) => {
   
   const customCourses = safeStorageRead('cd_custom_courses', []);
   
-  let addedCount = 0;
-  const newCustom = [...customCourses];
-  
-  for (const c of coursesList) {
-    if (!c.title) continue;
-    const id = c._id || 'c_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+  const formattedItems = coursesList.filter(c => c && c.title).map(c => {
     const slug = c.slug || c.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    
-    const formatted = {
-      _id: id,
+    const item = {
+      ...c,
       slug,
-      title: c.title,
-      subtitle: c.subtitle || '',
-      category: c.category || 'Software & Web Development',
-      level: c.level || 'Beginner to Advanced',
-      duration: c.duration || '60 Hours (8 Weeks)',
       price: Number(c.price) || 499,
       discountPrice: Number(c.discountPrice) || (Number(c.price) ? Math.round(Number(c.price) * 0.8) : 399),
       rating: Number(c.rating) || 4.9,
-      numReviews: Number(c.numReviews) || 150,
-      description: c.description || c.overview || 'Industry certified training program with live mentorship and guaranteed internship assistance.',
-      overview: c.overview || c.description || '',
-      thumbnail: c.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80',
-      syllabusPdf: c.syllabusPdf || '',
-      isPublished: true,
-      isFeatured: c.isFeatured || false,
-      isPopular: c.isPopular !== undefined ? c.isPopular : true
+      isPublished: true
     };
-    
-    const existIdx = newCustom.findIndex(item => item._id === id || item.slug === slug);
+    if (item._id && (String(item._id).startsWith('c_') || !/^[0-9a-fA-F]{24}$/.test(item._id))) {
+      delete item._id;
+    }
+    return item;
+  });
+
+  try {
+    const res = await api.post('/courses/bulk', { courses: formattedItems });
+    if (res.data?.data && Array.isArray(res.data.data)) {
+      const dbSaved = res.data.data;
+      const combined = [...dbSaved, ...customCourses.filter(c => !dbSaved.some(s => s._id === c._id || s.slug === c.slug))];
+      localStorage.setItem('cd_custom_courses', JSON.stringify(combined));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: combined }));
+      }
+      return dbSaved.length;
+    }
+  } catch (err) {
+    console.error('Bulk MongoDB import warning:', err.response?.data?.message || err.message);
+  }
+
+  // Fallback local storage update if offline
+  let addedCount = 0;
+  const newCustom = [...customCourses];
+  for (const c of formattedItems) {
+    const id = c._id || 'c_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+    const formatted = { ...c, _id: id };
+    const existIdx = newCustom.findIndex(item => item._id === id || item.slug === c.slug);
     if (existIdx >= 0) {
       newCustom[existIdx] = formatted;
     } else {
@@ -1696,13 +1730,10 @@ export const bulkImportCoursesLive = async (coursesList) => {
     }
     addedCount++;
   }
-  
   localStorage.setItem('cd_custom_courses', JSON.stringify(newCustom));
-  
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: { bulk: true, count: addedCount } }));
+    window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: newCustom }));
   }
-  
   return addedCount;
 };
 
