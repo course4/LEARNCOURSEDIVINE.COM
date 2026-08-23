@@ -1515,10 +1515,13 @@ Job readiness is not about knowing everything. It is the ability to demonstrate 
   ]
 };
 
+// Live Production Render Backend API URL
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://coursedivinewebsite.onrender.com/api';
+
 // Axios Instance
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
-  timeout: 10000,
+  baseURL: API_BASE_URL,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json'
   }
