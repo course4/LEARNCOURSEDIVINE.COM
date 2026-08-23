@@ -1567,6 +1567,40 @@ export const getLiveCourses = () => {
   return customCourses.filter(c => !deletedIds.includes(c._id) && !deletedIds.includes(c.slug));
 };
 
+export const fetchLiveCoursesFromApi = async () => {
+  try {
+    const res = await api.get('/courses?limit=1000');
+    if (res.data?.data && Array.isArray(res.data.data)) {
+      const apiCourses = res.data.data;
+      const customCourses = safeStorageRead('cd_custom_courses', []);
+      const deletedIds = safeStorageRead('cd_deleted_course_ids', []);
+      
+      const mergedMap = new Map();
+      apiCourses.forEach(c => {
+        if (!deletedIds.includes(c._id) && !deletedIds.includes(c.slug)) {
+          mergedMap.set(c.slug || c._id, c);
+        }
+      });
+      customCourses.forEach(c => {
+        if (!deletedIds.includes(c._id) && !deletedIds.includes(c.slug)) {
+          mergedMap.set(c.slug || c._id, c);
+        }
+      });
+      
+      const merged = Array.from(mergedMap.values());
+      localStorage.setItem('cd_custom_courses', JSON.stringify(merged));
+      
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: merged }));
+      }
+      return merged;
+    }
+  } catch (err) {
+    // Graceful offline fallback
+  }
+  return getLiveCourses();
+};
+
 export const getLiveCourseBySlug = (slug) => {
   const courses = getLiveCourses();
   return courses.find(c => c.slug === slug || c._id === slug) || null;
@@ -1605,12 +1639,15 @@ export const saveCourseLive = async (courseData) => {
     window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: formattedCourse }));
   }
   
-  // Sync to backend API if available
+  // Sync to backend MongoDB API
   try {
     if (courseData._id && !courseData._id.startsWith('c_')) {
       await api.put(`/courses/${courseData._id}`, formattedCourse);
     } else {
-      await api.post('/courses', formattedCourse);
+      const res = await api.post('/courses', formattedCourse);
+      if (res.data?.data?._id) {
+        formattedCourse._id = res.data.data._id;
+      }
     }
   } catch (err) {
     // Graceful offline fallback

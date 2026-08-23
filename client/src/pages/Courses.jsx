@@ -11,7 +11,7 @@ import {
   ChevronRight,
   ArrowRight
 } from 'lucide-react';
-import api, { fallbackStore, getLiveCourses } from '../services/api';
+import api, { fallbackStore, getLiveCourses, fetchLiveCoursesFromApi } from '../services/api';
 import CourseCard from '../components/CourseCard';
 
 const Courses = () => {
@@ -19,6 +19,13 @@ const Courses = () => {
   const [courses, setCourses] = useState(() => getLiveCourses());
   const [categories, setCategories] = useState(fallbackStore.categories);
   const [loading, setLoading] = useState(false);
+
+  // Initial fetch from live MongoDB Atlas backend
+  useEffect(() => {
+    fetchLiveCoursesFromApi().then(() => {
+      filterAndSetCourses();
+    });
+  }, []);
 
   // Filters State
   const [search, setSearch] = useState(searchParams.get('search') || '');

@@ -22,6 +22,7 @@ import {
 import api, {
   fallbackStore,
   getLiveCourses,
+  fetchLiveCoursesFromApi,
   saveCourseLive,
   deleteCourseLive,
   bulkImportCoursesLive
@@ -49,12 +50,11 @@ const AdminCourses = () => {
     discountPrice: 399,
     description: '',
     overview: '',
-    thumbnail: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80',
-    syllabusPdf: '',
-    pdfFileName: '',
     highlights: '',
-    isPublished: true,
-    isFeatured: false
+    thumbnail: '',
+    badge: 'Popular',
+    syllabusPdf: '',
+    pdfFileName: ''
   });
 
   const loadCourses = () => {
@@ -62,7 +62,9 @@ const AdminCourses = () => {
   };
 
   useEffect(() => {
-    loadCourses();
+    fetchLiveCoursesFromApi().then(() => {
+      loadCourses();
+    });
 
     const handleCoursesUpdated = () => {
       loadCourses();
