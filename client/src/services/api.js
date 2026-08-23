@@ -1561,13 +1561,9 @@ const safeStorageRead = (key, fallback) => {
 // Clear demo courses so Admin starts with a fresh empty catalog
 fallbackStore.courses = [];
 
-// Unified Synchronized Course Store Manager (Clean state - only Admin added courses)
+// Unified Synchronized Course Store Manager (Pure Direct MongoDB Atlas Cloud Sync)
 export const getLiveCourses = () => {
-  const customCourses = safeStorageRead('cd_custom_courses', []);
-  const deletedIds = safeStorageRead('cd_deleted_course_ids', []);
-  
-  // Return only live custom courses added by admin
-  return customCourses.filter(c => !deletedIds.includes(c._id) && !deletedIds.includes(c.slug));
+  return safeStorageRead('cd_custom_courses', []);
 };
 
 export const fetchLiveCoursesFromApi = async () => {
@@ -1575,28 +1571,12 @@ export const fetchLiveCoursesFromApi = async () => {
     const res = await api.get('/courses?limit=1000');
     if (res.data?.data && Array.isArray(res.data.data)) {
       const apiCourses = res.data.data;
-      const customCourses = safeStorageRead('cd_custom_courses', []);
-      const deletedIds = safeStorageRead('cd_deleted_course_ids', []);
-      
-      const mergedMap = new Map();
-      apiCourses.forEach(c => {
-        if (!deletedIds.includes(c._id) && !deletedIds.includes(c.slug)) {
-          mergedMap.set(c.slug || c._id, c);
-        }
-      });
-      customCourses.forEach(c => {
-        if (!deletedIds.includes(c._id) && !deletedIds.includes(c.slug)) {
-          mergedMap.set(c.slug || c._id, c);
-        }
-      });
-      
-      const merged = Array.from(mergedMap.values());
-      localStorage.setItem('cd_custom_courses', JSON.stringify(merged));
+      localStorage.setItem('cd_custom_courses', JSON.stringify(apiCourses));
       
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: merged }));
+        window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: apiCourses }));
       }
-      return merged;
+      return apiCourses;
     }
   } catch (err) {
     // Graceful offline fallback
@@ -1611,7 +1591,6 @@ export const getLiveCourseBySlug = (slug) => {
 
 export const saveCourseLive = async (courseData) => {
   const customCourses = safeStorageRead('cd_custom_courses', []);
-  const deletedIds = safeStorageRead('cd_deleted_course_ids', []);
   
   const id = courseData._id || 'c_' + Date.now();
   const slug = courseData.slug || courseData.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -1624,12 +1603,25 @@ export const saveCourseLive = async (courseData) => {
     updatedAt: new Date().toISOString()
   };
   
-  // Remove from deleted list if re-adding
-  const updatedDeleted = deletedIds.filter(did => did !== id && did !== slug);
-  localStorage.setItem('cd_deleted_course_ids', JSON.stringify(updatedDeleted));
+  // Direct Cloud Sync to MongoDB Atlas on Render
+  try {
+    if (courseData._id && !courseData._id.startsWith('c_')) {
+      const res = await api.put(`/courses/${courseData._id}`, formattedCourse);
+      if (res.data?.data) {
+        Object.assign(formattedCourse, res.data.data);
+      }
+    } else {
+      const res = await api.post('/courses', formattedCourse);
+      if (res.data?.data) {
+        Object.assign(formattedCourse, res.data.data);
+      }
+    }
+  } catch (err) {
+    console.error('MongoDB cloud sync warning:', err.message);
+  }
   
   // Add or update in custom courses
-  const existingIdx = customCourses.findIndex(c => c._id === id || c.slug === slug);
+  const existingIdx = customCourses.findIndex(c => c._id === formattedCourse._id || c.slug === formattedCourse.slug);
   if (existingIdx >= 0) {
     customCourses[existingIdx] = formattedCourse;
   } else {
@@ -1637,23 +1629,8 @@ export const saveCourseLive = async (courseData) => {
   }
   localStorage.setItem('cd_custom_courses', JSON.stringify(customCourses));
   
-  // Dispatch global window event so all components react instantly
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: formattedCourse }));
-  }
-  
-  // Sync to backend MongoDB API
-  try {
-    if (courseData._id && !courseData._id.startsWith('c_')) {
-      await api.put(`/courses/${courseData._id}`, formattedCourse);
-    } else {
-      const res = await api.post('/courses', formattedCourse);
-      if (res.data?.data?._id) {
-        formattedCourse._id = res.data.data._id;
-      }
-    }
-  } catch (err) {
-    // Graceful offline fallback
+    window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: customCourses }));
   }
   
   return formattedCourse;
@@ -1661,30 +1638,17 @@ export const saveCourseLive = async (courseData) => {
 
 export const deleteCourseLive = async (courseId) => {
   const customCourses = safeStorageRead('cd_custom_courses', []);
-  const deletedIds = safeStorageRead('cd_deleted_course_ids', []);
-  
-  // Find course to get slug as well
-  const target = customCourses.find(c => c._id === courseId) || fallbackStore.courses.find(c => c._id === courseId);
-  const targetSlug = target?.slug;
-  
-  // Add to deleted IDs
-  const newDeleted = Array.from(new Set([...deletedIds, courseId, targetSlug].filter(Boolean)));
-  localStorage.setItem('cd_deleted_course_ids', JSON.stringify(newDeleted));
-  
-  // Remove from custom courses
-  const updatedCustom = customCourses.filter(c => c._id !== courseId && c.slug !== targetSlug);
+  const updatedCustom = customCourses.filter(c => c._id !== courseId && c.slug !== courseId);
   localStorage.setItem('cd_custom_courses', JSON.stringify(updatedCustom));
   
-  // Dispatch global window event
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: { deletedId: courseId } }));
+    window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: updatedCustom }));
   }
   
-  // Sync deletion to backend API if available
   try {
     await api.delete(`/courses/${courseId}`);
   } catch (err) {
-    // Graceful offline fallback
+    console.error('MongoDB cloud delete warning:', err.message);
   }
   
   return true;
