@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { HashRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { NotificationProvider } from './context/NotificationContext';
 
@@ -53,6 +53,25 @@ const ScrollToTopOnRoute = () => {
   }, [pathname]);
 
   return null;
+};
+
+// Strict Admin Route Guard - only verified Administrators can enter
+const AdminRoute = ({ children }) => {
+  const { isAuthenticated, isAdmin, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || !isAdmin) {
+    return <Navigate to="/login" replace state={{ from: window.location.hash }} />;
+  }
+
+  return children;
 };
 
 // Global Error Boundary to prevent crashes
@@ -145,13 +164,13 @@ function App() {
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/dashboard/*" element={<Dashboard />} />
 
-                    {/* Admin Portal */}
-                    <Route path="/admin" element={<AdminDashboard />} />
-                    <Route path="/admin/courses" element={<AdminCourses />} />
-                    <Route path="/admin/users" element={<AdminUsers />} />
-                    <Route path="/admin/internships" element={<AdminInternships />} />
-                    <Route path="/admin/enquiries" element={<AdminEnquiries />} />
-                    <Route path="/admin/blogs" element={<AdminBlogs />} />
+                    {/* Protected Admin Portal - Strict Guard */}
+                    <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+                    <Route path="/admin/courses" element={<AdminRoute><AdminCourses /></AdminRoute>} />
+                    <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+                    <Route path="/admin/internships" element={<AdminRoute><AdminInternships /></AdminRoute>} />
+                    <Route path="/admin/enquiries" element={<AdminRoute><AdminEnquiries /></AdminRoute>} />
+                    <Route path="/admin/blogs" element={<AdminRoute><AdminBlogs /></AdminRoute>} />
 
                     {/* 404 Not Found */}
                     <Route path="*" element={<NotFound />} />
