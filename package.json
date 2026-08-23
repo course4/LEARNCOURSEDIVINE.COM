@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "Course Divine Full-Stack Production Platform Rebuild",
   "scripts": {
+    "build": "cd client && npm install && npm run build",
     "server": "cd server && node server.js",
     "client": "cd client && npm run dev",
-    "build": "cd client && npm run build",
     "seed": "cd server && node seed.js"
   },
   "keywords": ["education", "course-divine", "react", "nodejs", "express", "mongodb"],
