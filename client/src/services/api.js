@@ -1561,27 +1561,76 @@ const safeStorageRead = (key, fallback) => {
 // Clear demo courses so Admin starts with a fresh empty catalog
 fallbackStore.courses = [];
 
+// Cross-tab broadcast channel
+const coursesChannel = typeof window !== 'undefined' && 'BroadcastChannel' in window
+  ? new BroadcastChannel('cd_courses_broadcast')
+  : null;
+
+if (coursesChannel) {
+  coursesChannel.onmessage = (event) => {
+    if (event.data?.type === 'COURSES_UPDATED') {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: event.data.courses }));
+      }
+    }
+  };
+}
+
+const broadcastCoursesUpdate = (courses) => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: courses }));
+  }
+  if (coursesChannel) {
+    try {
+      coursesChannel.postMessage({ type: 'COURSES_UPDATED', courses });
+    } catch (e) {}
+  }
+};
+
 // Unified Synchronized Course Store Manager (Pure Direct MongoDB Atlas Cloud Sync)
 export const getLiveCourses = () => {
   return safeStorageRead('cd_custom_courses', []);
 };
 
 export const fetchLiveCoursesFromApi = async () => {
+  const localCourses = getLiveCourses();
   try {
     const res = await api.get('/courses?limit=1000');
     if (res.data?.data && Array.isArray(res.data.data)) {
       const apiCourses = res.data.data;
-      localStorage.setItem('cd_custom_courses', JSON.stringify(apiCourses));
       
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: apiCourses }));
+      let mergedCourses = [];
+      if (apiCourses.length > 0) {
+        // Merge API courses with any local unsaved courses
+        const unsavedLocal = localCourses.filter(loc => 
+          !apiCourses.some(apiC => apiC._id === loc._id || apiC.slug === loc.slug || apiC.title?.toLowerCase() === loc.title?.toLowerCase())
+        );
+        mergedCourses = [...apiCourses, ...unsavedLocal];
+      } else {
+        // If API returned 0 courses but local storage has courses, PRESERVE local courses and try to push them to API!
+        mergedCourses = localCourses;
+        if (localCourses.length > 0) {
+          // Asynchronously push local courses to backend
+          localCourses.forEach(async (c) => {
+            try {
+              const payload = { ...c };
+              if (String(payload._id).startsWith('c_') || !/^[0-9a-fA-F]{24}$/.test(payload._id)) {
+                delete payload._id;
+              }
+              await api.post('/courses', payload);
+            } catch (e) {}
+          });
+        }
       }
-      return apiCourses;
+
+      localStorage.setItem('cd_custom_courses', JSON.stringify(mergedCourses));
+      broadcastCoursesUpdate(mergedCourses);
+      return mergedCourses;
     }
   } catch (err) {
-    // Graceful offline fallback
+    // Offline or network warning - preserve existing courses
   }
-  return getLiveCourses();
+  return localCourses;
 };
 
 export const getLiveCourseBySlug = (slug) => {
@@ -1603,7 +1652,6 @@ export const saveCourseLive = async (courseData) => {
     discountPrice: Number(courseData.discountPrice) || Number(courseData.price) || 399
   };
 
-  // Strip temporary string _id so MongoDB generates a valid ObjectId
   if (!isExistingMongoCourse) {
     delete payload._id;
   }
@@ -1616,6 +1664,16 @@ export const saveCourseLive = async (courseData) => {
     updatedAt: new Date().toISOString()
   };
   
+  // Immediately save locally so UI never lags
+  const existingIdx = customCourses.findIndex(c => c._id === savedCourse._id || c.slug === savedCourse.slug);
+  if (existingIdx >= 0) {
+    customCourses[existingIdx] = savedCourse;
+  } else {
+    customCourses.unshift(savedCourse);
+  }
+  localStorage.setItem('cd_custom_courses', JSON.stringify(customCourses));
+  broadcastCoursesUpdate(customCourses);
+
   // Direct Cloud Sync to MongoDB Atlas on Render API
   try {
     if (isExistingMongoCourse) {
@@ -1629,21 +1687,15 @@ export const saveCourseLive = async (courseData) => {
         savedCourse = res.data.data;
       }
     }
+    // Update with real MongoDB ObjectId
+    const finalIdx = customCourses.findIndex(c => c._id === savedCourse._id || c.slug === savedCourse.slug);
+    if (finalIdx >= 0) {
+      customCourses[finalIdx] = savedCourse;
+      localStorage.setItem('cd_custom_courses', JSON.stringify(customCourses));
+      broadcastCoursesUpdate(customCourses);
+    }
   } catch (err) {
-    console.error('MongoDB cloud sync warning:', err.response?.data?.message || err.message);
-  }
-  
-  // Add or update in custom courses
-  const existingIdx = customCourses.findIndex(c => c._id === savedCourse._id || c.slug === savedCourse.slug);
-  if (existingIdx >= 0) {
-    customCourses[existingIdx] = savedCourse;
-  } else {
-    customCourses.unshift(savedCourse);
-  }
-  localStorage.setItem('cd_custom_courses', JSON.stringify(customCourses));
-  
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: customCourses }));
+    console.error('MongoDB cloud sync notice:', err.response?.data?.message || err.message);
   }
   
   return savedCourse;
@@ -1653,15 +1705,12 @@ export const deleteCourseLive = async (courseId) => {
   const customCourses = safeStorageRead('cd_custom_courses', []);
   const updatedCustom = customCourses.filter(c => c._id !== courseId && c.slug !== courseId);
   localStorage.setItem('cd_custom_courses', JSON.stringify(updatedCustom));
-  
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: updatedCustom }));
-  }
+  broadcastCoursesUpdate(updatedCustom);
   
   try {
     await api.delete(`/courses/${courseId}`);
   } catch (err) {
-    console.error('MongoDB cloud delete warning:', err.response?.data?.message || err.message);
+    console.error('MongoDB cloud delete notice:', err.response?.data?.message || err.message);
   }
   
   return true;
@@ -1669,13 +1718,11 @@ export const deleteCourseLive = async (courseId) => {
 
 export const clearAllCoursesLive = async () => {
   localStorage.setItem('cd_custom_courses', JSON.stringify([]));
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('cd_courses_updated', { detail: [] }));
-  }
+  broadcastCoursesUpdate([]);
   try {
     await api.delete('/courses/clear-all');
   } catch (err) {
-    console.error('Clear MongoDB warning:', err.response?.data?.message || err.message);
+    console.error('Clear MongoDB notice:', err.response?.data?.message || err.message);
   }
   return true;
 };
