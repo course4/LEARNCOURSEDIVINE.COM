@@ -60,13 +60,15 @@ export const AuthProvider = ({ children }) => {
 
     // Master Admin authentication with real backend JWT token
     if (
+      cleanEmail === 'coursedivine@admin' ||
+      cleanEmail === 'coursedivine@admin.com' ||
       cleanEmail === 'admin@coursedivine.com' ||
       cleanEmail === 'admin@learncoursedivine.com' ||
       cleanEmail === 'admin'
     ) {
-      if (password === 'Admin@123' || password === 'admin' || password === 'Admin@2026' || password === 'admin123') {
+      if (password === '9876543210' || password === 'Admin@123') {
         try {
-          const res = await api.post('/auth/login', { email: 'admin@coursedivine.com', password: 'Admin@123' });
+          const res = await api.post('/auth/login', { email: cleanEmail, password });
           if (res.data?.success && res.data.data?.token) {
             const userData = res.data.data;
             setUser(userData);
@@ -79,7 +81,7 @@ export const AuthProvider = ({ children }) => {
         const adminUser = {
           _id: 'admin_master_1',
           name: 'Course Divine Administrator',
-          email: 'admin@coursedivine.com',
+          email: 'coursedivine@admin',
           role: 'admin',
           avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Admin&backgroundColor=071F3F&textColor=ffffff',
           token: 'admin_jwt_' + Date.now()
@@ -89,7 +91,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('cd_user', JSON.stringify(adminUser));
         return { success: true, user: adminUser };
       } else {
-        return { success: false, message: 'Incorrect password for Admin account. (Default: Admin@123)' };
+        return { success: false, message: 'Incorrect password for Admin account.' };
       }
     }
 

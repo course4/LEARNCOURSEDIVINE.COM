@@ -1547,11 +1547,19 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
-        const loginRes = await axios.post(`${API_BASE_URL}/auth/login`, {
-          email: 'admin@coursedivine.com',
-          password: 'Admin@123'
-        });
-        const newToken = loginRes.data?.data?.token;
+        let loginRes;
+        try {
+          loginRes = await axios.post(`${API_BASE_URL}/auth/login`, {
+            email: 'coursedivine@admin',
+            password: '9876543210'
+          });
+        } catch (e) {
+          loginRes = await axios.post(`${API_BASE_URL}/auth/login`, {
+            email: 'admin@coursedivine.com',
+            password: 'Admin@123'
+          });
+        }
+        const newToken = loginRes?.data?.data?.token;
         if (newToken) {
           localStorage.setItem('cd_token', newToken);
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
@@ -1635,8 +1643,8 @@ export const getValidAdminToken = async () => {
   }
   try {
     const res = await axios.post(`${API_BASE_URL}/auth/login`, {
-      email: 'admin@coursedivine.com',
-      password: 'Admin@123'
+      email: 'coursedivine@admin',
+      password: '9876543210'
     });
     if (res.data?.data?.token) {
       token = res.data.data.token;
@@ -1644,7 +1652,17 @@ export const getValidAdminToken = async () => {
       return token;
     }
   } catch (err) {
-    // fallback
+    try {
+      const res2 = await axios.post(`${API_BASE_URL}/auth/login`, {
+        email: 'admin@coursedivine.com',
+        password: 'Admin@123'
+      });
+      if (res2.data?.data?.token) {
+        token = res2.data.data.token;
+        localStorage.setItem('cd_token', token);
+        return token;
+      }
+    } catch (e2) {}
   }
   return token;
 };

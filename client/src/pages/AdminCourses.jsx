@@ -401,13 +401,13 @@ const AdminCourses = () => {
 
     try {
       const cleanPass = adminPasswordInput.trim();
-      if (cleanPass === 'Admin@123' || cleanPass === 'admin' || cleanPass === 'Admin@2026' || cleanPass === 'admin123') {
-        await login('admin@coursedivine.com', cleanPass).catch(() => {});
+      if (cleanPass === '9876543210' || cleanPass === 'Admin@123') {
+        await login('coursedivine@admin', cleanPass).catch(() => {});
         setIsCourseHubUnlocked(true);
         showToast('Admin verification successful! Course Management unlocked.', 'success');
         setAdminPasswordInput('');
       } else {
-        const res = await login('admin@coursedivine.com', cleanPass);
+        const res = await login('coursedivine@admin', cleanPass);
         if (res.success) {
           setIsCourseHubUnlocked(true);
           showToast('Admin verification successful! Course Management unlocked.', 'success');
