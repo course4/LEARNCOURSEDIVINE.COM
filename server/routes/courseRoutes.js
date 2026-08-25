@@ -7,6 +7,7 @@ const {
   createCourse,
   bulkCreateCourses,
   updateCourse,
+  toggleCourseStatus,
   deleteCourse,
   clearAllCourses,
   addCourseReview
@@ -28,7 +29,10 @@ router.route('/:id')
   .put(updateCourse)
   .delete(deleteCourse);
 
+router.patch('/:id/status', toggleCourseStatus);
+
 router.post('/:id/reviews', protect, addCourseReview);
 
 module.exports = router;
+
 

@@ -250,11 +250,33 @@ Official Portal: https://www.learncoursedivine.com/
     }
   };
 
-  if (loading || !course) {
+  if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-20 text-center">
         <div className="w-12 h-12 border-4 border-brand-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
         <p className="text-sm font-semibold text-slate-600">Loading course curriculum...</p>
+      </div>
+    );
+  }
+
+  if (!course) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-24 text-center space-y-6">
+        <div className="w-20 h-20 bg-rose-50 text-rose-600 rounded-3xl flex items-center justify-center mx-auto shadow-inner border border-rose-200">
+          <BookOpen className="w-10 h-10" />
+        </div>
+        <h2 className="text-3xl font-extrabold text-slate-900">Course Not Found</h2>
+        <p className="text-sm text-slate-500 max-w-md mx-auto">
+          The course program you are looking for may have been updated, deactivated, or removed by the course administrator.
+        </p>
+        <div className="pt-2">
+          <Link
+            to="/courses"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm shadow-lg shadow-brand-600/30 transition"
+          >
+            Explore All Courses in Learning Lounge <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
       </div>
     );
   }

@@ -17,7 +17,15 @@ import {
   Sparkles,
   FileSpreadsheet,
   AlertCircle,
-  Eye
+  Eye,
+  ToggleLeft,
+  ToggleRight,
+  ShieldCheck,
+  Tag,
+  Clock,
+  Layers,
+  HelpCircle,
+  UserCheck
 } from 'lucide-react';
 import api, {
   fallbackStore,
@@ -26,7 +34,8 @@ import api, {
   saveCourseLive,
   deleteCourseLive,
   clearAllCoursesLive,
-  bulkImportCoursesLive
+  bulkImportCoursesLive,
+  toggleCourseStatusLive
 } from '../services/api';
 import { useNotification } from '../context/NotificationContext';
 
@@ -39,23 +48,36 @@ const AdminCourses = () => {
   const [editingCourse, setEditingCourse] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [bulkDataText, setBulkDataText] = useState('');
+  
+  // Custom Delete Modal State
+  const [deleteConfirmCourse, setDeleteConfirmCourse] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Status Toggling State
+  const [togglingCourseId, setTogglingCourseId] = useState(null);
 
   // Course Form State
   const [formData, setFormData] = useState({
     title: '',
+    slug: '',
     subtitle: '',
     category: 'Software & Web Development',
     level: 'Beginner to Advanced',
     duration: '80 Hours (10 Weeks)',
+    totalLectures: 45,
     price: 499,
     discountPrice: 399,
     description: '',
     overview: '',
     highlights: '',
     thumbnail: '',
-    badge: 'Popular',
     syllabusPdf: '',
-    pdfFileName: ''
+    pdfFileName: '',
+    isPublished: true,
+    isFeatured: false,
+    isPopular: true,
+    instructorName: 'Course Divine Senior Mentor',
+    instructorTitle: 'Lead Industry Architect'
   });
 
   const loadCourses = () => {
@@ -134,17 +156,37 @@ const AdminCourses = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleDelete = async (courseId, courseTitle) => {
-    if (!window.confirm(`Are you sure you want to permanently delete "${courseTitle}"? It will be removed immediately from the entire website.`)) {
-      return;
+  // Quick Status Toggle (Live vs Draft)
+  const handleToggleStatus = async (course) => {
+    setTogglingCourseId(course._id);
+    try {
+      const newStatus = await toggleCourseStatusLive(course._id, course.isPublished !== false);
+      loadCourses();
+      showToast(
+        newStatus ? `"${course.title}" is now LIVE on website` : `"${course.title}" is now DRAFT / HIDDEN`,
+        newStatus ? 'success' : 'info'
+      );
+    } catch (err) {
+      showToast('Failed to update course status', 'error');
+    } finally {
+      setTogglingCourseId(null);
     }
+  };
+
+  // Permanent Delete Confirmation Execution
+  const executeDeleteCourse = async () => {
+    if (!deleteConfirmCourse) return;
+    setIsDeleting(true);
 
     try {
-      await deleteCourseLive(courseId);
+      await deleteCourseLive(deleteConfirmCourse._id);
       loadCourses();
-      showToast(`"${courseTitle}" has been deleted from the website`, 'info');
+      showToast(`"${deleteConfirmCourse.title}" removed permanently from database`, 'info');
+      setDeleteConfirmCourse(null);
     } catch (err) {
       showToast('Failed to delete course', 'error');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -166,18 +208,32 @@ const AdminCourses = () => {
             'ISO & APSCHE recognized certificate upon completion'
           ];
 
+      const slug = formData.slug
+        ? formData.slug.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+        : formData.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
       const coursePayload = {
         ...formData,
         title: formData.title.trim(),
+        slug,
         price: Number(formData.price) || 499,
         discountPrice: Number(formData.discountPrice) || Number(formData.price) || 399,
+        totalLectures: Number(formData.totalLectures) || 45,
         highlights: highlightsArray,
-        overview: formData.overview || formData.description
+        overview: formData.overview || formData.description,
+        isPublished: formData.isPublished !== undefined ? formData.isPublished : true,
+        isFeatured: Boolean(formData.isFeatured),
+        isPopular: Boolean(formData.isPopular),
+        instructor: {
+          name: formData.instructorName || 'Course Divine Senior Mentor',
+          title: formData.instructorTitle || 'Lead Industry Architect',
+          bio: '10+ years of enterprise experience building scalable architectures.',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
+        }
       };
 
       if (editingCourse) {
         coursePayload._id = editingCourse._id;
-        coursePayload.slug = editingCourse.slug;
       }
 
       await saveCourseLive(coursePayload);
@@ -185,35 +241,44 @@ const AdminCourses = () => {
 
       showToast(
         editingCourse
-          ? `"${coursePayload.title}" updated successfully!`
-          : `"${coursePayload.title}" published live to the Learning Lounge!`,
+          ? `"${coursePayload.title}" updated successfully in database!`
+          : `"${coursePayload.title}" published live to the Learning Lounge & Website!`,
         'success'
       );
 
       setShowAddModal(false);
       setEditingCourse(null);
-      setFormData({
-        title: '',
-        subtitle: '',
-        category: 'Software & Web Development',
-        level: 'Beginner to Advanced',
-        duration: '80 Hours (10 Weeks)',
-        price: 499,
-        discountPrice: 399,
-        description: '',
-        overview: '',
-        thumbnail: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80',
-        syllabusPdf: '',
-        pdfFileName: '',
-        highlights: '',
-        isPublished: true,
-        isFeatured: false
-      });
+      resetForm();
     } catch (err) {
       showToast('Failed to save course. Please try again.', 'error');
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      slug: '',
+      subtitle: '',
+      category: 'Software & Web Development',
+      level: 'Beginner to Advanced',
+      duration: '80 Hours (10 Weeks)',
+      totalLectures: 45,
+      price: 499,
+      discountPrice: 399,
+      description: '',
+      overview: '',
+      thumbnail: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80',
+      syllabusPdf: '',
+      pdfFileName: '',
+      highlights: '',
+      isPublished: true,
+      isFeatured: false,
+      isPopular: true,
+      instructorName: 'Course Divine Senior Mentor',
+      instructorTitle: 'Lead Industry Architect'
+    });
   };
 
   // Bulk Import Handler
@@ -232,7 +297,7 @@ const AdminCourses = () => {
         const parsed = JSON.parse(bulkDataText);
         parsedCourses = Array.isArray(parsed) ? parsed : [parsed];
       } else {
-        // Parse CSV or newline formatted text: Title, Category, Price, DiscountPrice, Duration
+        // Parse CSV: Title, Category, Price, DiscountPrice, Duration, Description
         const lines = bulkDataText.split('\n').filter((l) => l.trim());
         for (const line of lines) {
           const parts = line.split(/[,;\t|]/).map((p) => p.trim());
@@ -257,7 +322,7 @@ const AdminCourses = () => {
 
       const count = await bulkImportCoursesLive(parsedCourses);
       loadCourses();
-      showToast(`Successfully imported ${count} courses to the website!`, 'success');
+      showToast(`Successfully imported ${count} courses into MongoDB database!`, 'success');
       setShowBulkModal(false);
       setBulkDataText('');
     } catch (err) {
@@ -300,11 +365,11 @@ const AdminCourses = () => {
           <div className="flex items-center gap-2">
             <h1 className="text-3xl font-extrabold text-slate-900">Course Management</h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-brand-50 text-brand-700 border border-brand-200">
-              {courses.length} Live Courses
+              {courses.length} Total Programs
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Add new courses, upload PDF syllabus/brochures, edit pricing, or bulk-import 600+ courses.
+            Centrally manage, add, edit, activate/deactivate, and publish courses across LearnCourseDivine.
           </p>
         </div>
 
@@ -314,7 +379,7 @@ const AdminCourses = () => {
               onClick={handleClearAllCourses}
               className="px-3.5 py-2.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs shadow-sm transition flex items-center gap-1.5"
             >
-              <Trash2 className="w-3.5 h-3.5" /> Clear All Courses
+              <Trash2 className="w-3.5 h-3.5" /> Clear Catalog
             </button>
           )}
 
@@ -328,28 +393,12 @@ const AdminCourses = () => {
           <button
             onClick={() => {
               setEditingCourse(null);
-              setFormData({
-                title: '',
-                subtitle: '',
-                category: 'Software & Web Development',
-                level: 'Beginner to Advanced',
-                duration: '80 Hours (10 Weeks)',
-                price: 499,
-                discountPrice: 399,
-                description: '',
-                overview: '',
-                thumbnail: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80',
-                syllabusPdf: '',
-                pdfFileName: '',
-                highlights: '',
-                isPublished: true,
-                isFeatured: false
-              });
+              resetForm();
               setShowAddModal(true);
             }}
-            className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md transition flex items-center gap-2"
+            className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md shadow-brand-600/30 transition flex items-center gap-2"
           >
-            <Plus className="w-4 h-4" /> Add New Course
+            <Plus className="w-4 h-4" /> + Add New Course
           </button>
         </div>
       </div>
@@ -382,117 +431,197 @@ const AdminCourses = () => {
                 <th className="p-4">Duration & Level</th>
                 <th className="p-4">Price / Discount</th>
                 <th className="p-4">Syllabus PDF</th>
-                <th className="p-4">Status</th>
+                <th className="p-4">Status & Visibility</th>
                 <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredCourses.map((c) => (
-                <tr key={c._id} className="hover:bg-slate-50/60 transition">
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={c.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80'}
-                        alt={c.title}
-                        className="w-12 h-9 rounded-lg object-cover border border-slate-200 shadow-sm flex-shrink-0"
-                      />
-                      <div>
-                        <Link
-                          to={`/courses/${c.slug}`}
-                          target="_blank"
-                          className="font-bold text-slate-900 hover:text-brand-600 transition line-clamp-1 max-w-xs"
-                        >
-                          {c.title}
-                        </Link>
-                        <span className="text-[10px] text-slate-400 line-clamp-1">{c.subtitle || c.description}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <span className="font-semibold text-brand-700 bg-brand-50/80 px-2.5 py-1 rounded-lg border border-brand-100">
-                      {c.category}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <div className="font-medium text-slate-800">{c.duration}</div>
-                    <span className="text-[10px] text-slate-400">{c.level}</span>
-                  </td>
-                  <td className="p-4">
-                    <div className="font-mono font-bold text-slate-900 text-sm">
-                      ${(c.discountPrice || c.price).toLocaleString('en-US')}
-                    </div>
-                    {c.discountPrice && c.discountPrice < c.price && (
-                      <span className="text-slate-400 line-through text-[10px]">
-                        ${c.price.toLocaleString('en-US')}
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-4">
-                    {c.syllabusPdf ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                        <FileText className="w-3.5 h-3.5" /> PDF Attached
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-slate-400 italic">Auto-generated</span>
-                    )}
-                  </td>
-                  <td className="p-4">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                      Live
-                    </span>
-                  </td>
-                  <td className="p-4 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <Link
-                        to={`/courses/${c.slug}`}
-                        target="_blank"
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition"
-                        title="View Live Page"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Link>
-                      <button
-                        onClick={() => {
-                          setEditingCourse(c);
-                          setFormData({
-                            title: c.title || '',
-                            subtitle: c.subtitle || '',
-                            category: c.category || 'Software & Web Development',
-                            level: c.level || 'Beginner to Advanced',
-                            duration: c.duration || '80 Hours (10 Weeks)',
-                            price: c.price || 499,
-                            discountPrice: c.discountPrice || 399,
-                            description: c.description || c.overview || '',
-                            overview: c.overview || c.description || '',
-                            thumbnail: c.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80',
-                            syllabusPdf: c.syllabusPdf || '',
-                            pdfFileName: c.syllabusPdf ? 'Current Attached PDF' : '',
-                            highlights: Array.isArray(c.highlights) ? c.highlights.join('\n') : (c.highlights || ''),
-                            isPublished: c.isPublished !== undefined ? c.isPublished : true,
-                            isFeatured: !!c.isFeatured
-                          });
-                          setShowAddModal(true);
-                        }}
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition"
-                        title="Edit Course"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(c._id, c.title)}
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition"
-                        title="Permanently Delete Course"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+              {filteredCourses.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="p-12 text-center text-slate-400">
+                    <BookOpen className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                    <p className="font-semibold text-slate-600">No courses found matching your criteria</p>
+                    <p className="text-[11px] text-slate-400 mt-1">Click "+ Add New Course" above to create your first course.</p>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredCourses.map((c) => {
+                  const isLive = c.isPublished !== false;
+                  return (
+                    <tr key={c._id || c.slug} className="hover:bg-slate-50/60 transition">
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={c.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80'}
+                            alt={c.title}
+                            className="w-12 h-9 rounded-lg object-cover border border-slate-200 shadow-sm flex-shrink-0 bg-slate-100"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80';
+                            }}
+                          />
+                          <div>
+                            <Link
+                              to={`/courses/${c.slug}`}
+                              target="_blank"
+                              className="font-bold text-slate-900 hover:text-brand-600 transition line-clamp-1 max-w-xs"
+                            >
+                              {c.title}
+                            </Link>
+                            <span className="text-[10px] text-slate-400 line-clamp-1">{c.subtitle || c.description}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <span className="font-semibold text-brand-700 bg-brand-50/80 px-2.5 py-1 rounded-lg border border-brand-100">
+                          {c.category}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <div className="font-medium text-slate-800">{c.duration}</div>
+                        <span className="text-[10px] text-slate-400">{c.level}</span>
+                      </td>
+                      <td className="p-4">
+                        <div className="font-mono font-bold text-slate-900 text-sm">
+                          ${(c.discountPrice || c.price || 0).toLocaleString('en-US')}
+                        </div>
+                        {c.discountPrice && c.discountPrice < c.price && (
+                          <span className="text-slate-400 line-through text-[10px]">
+                            ${(c.price || 0).toLocaleString('en-US')}
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        {c.syllabusPdf ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                            <FileText className="w-3.5 h-3.5" /> PDF Attached
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 italic">Auto-generated</span>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        <button
+                          onClick={() => handleToggleStatus(c)}
+                          disabled={togglingCourseId === c._id}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold transition shadow-xs cursor-pointer ${
+                            isLive
+                              ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300'
+                              : 'bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-300'
+                          }`}
+                          title={`Click to ${isLive ? 'deactivate (hide)' : 'activate (publish)'} this course`}
+                        >
+                          {togglingCourseId === c._id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : isLive ? (
+                            <ToggleRight className="w-4 h-4 text-emerald-600" />
+                          ) : (
+                            <ToggleLeft className="w-4 h-4 text-amber-600" />
+                          )}
+                          <span>{isLive ? 'Live & Active' : 'Draft / Hidden'}</span>
+                        </button>
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Link
+                            to={`/courses/${c.slug}`}
+                            target="_blank"
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition"
+                            title="View Live Course Page"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Link>
+                          <button
+                            onClick={() => {
+                              setEditingCourse(c);
+                              setFormData({
+                                title: c.title || '',
+                                slug: c.slug || '',
+                                subtitle: c.subtitle || '',
+                                category: c.category || 'Software & Web Development',
+                                level: c.level || 'Beginner to Advanced',
+                                duration: c.duration || '80 Hours (10 Weeks)',
+                                totalLectures: c.totalLectures || 45,
+                                price: c.price || 499,
+                                discountPrice: c.discountPrice || 399,
+                                description: c.description || c.overview || '',
+                                overview: c.overview || c.description || '',
+                                thumbnail: c.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80',
+                                syllabusPdf: c.syllabusPdf || '',
+                                pdfFileName: c.syllabusPdf ? 'Attached Syllabus' : '',
+                                highlights: Array.isArray(c.highlights) ? c.highlights.join('\n') : (c.highlights || ''),
+                                isPublished: c.isPublished !== false,
+                                isFeatured: Boolean(c.isFeatured),
+                                isPopular: Boolean(c.isPopular),
+                                instructorName: c.instructor?.name || 'Course Divine Senior Mentor',
+                                instructorTitle: c.instructor?.title || 'Lead Industry Architect'
+                              });
+                              setShowAddModal(true);
+                            }}
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition"
+                            title="Edit Course"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirmCourse(c)}
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition"
+                            title="Permanently Delete Course"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmCourse && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-4">
+            <div className="w-14 h-14 bg-rose-50 border border-rose-200 text-rose-600 rounded-2xl flex items-center justify-center mx-auto">
+              <Trash2 className="w-7 h-7" />
+            </div>
+            
+            <div className="text-center space-y-2">
+              <h3 className="text-xl font-bold text-slate-900">Delete Course Program?</h3>
+              <p className="text-xs text-slate-600">
+                Are you sure you want to permanently delete{' '}
+                <strong className="text-slate-900">"{deleteConfirmCourse.title}"</strong>?
+              </p>
+              <div className="p-3 bg-rose-50/70 rounded-xl text-[11px] text-rose-700 border border-rose-200 text-left">
+                ⚠️ This will permanently remove the course from the central database, public website, Learning Lounge, and search filters.
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setDeleteConfirmCourse(null)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs hover:bg-slate-200 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={executeDeleteCourse}
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                Yes, Delete Course
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add / Edit Course Modal */}
       {showAddModal && (
@@ -504,7 +633,7 @@ const AdminCourses = () => {
                   {editingCourse ? '✏️ Edit Course Program' : '✨ Add New Course Program'}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Changes will update immediately across the entire website and Learning Lounge.
+                  Saved changes sync immediately to MongoDB Atlas and across all pages worldwide.
                 </p>
               </div>
               <button
@@ -516,17 +645,37 @@ const AdminCourses = () => {
             </div>
 
             <form onSubmit={handleSaveCourse} className="space-y-5 text-xs">
-              {/* Course Title */}
-              <div>
-                <label className="block font-bold text-slate-800 mb-1">Course Title *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="e.g. Full Stack Cloud & Microservices Engineering Masterclass"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                />
+              {/* Course Title & Custom Slug */}
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                <div className="sm:col-span-8">
+                  <label className="block font-bold text-slate-800 mb-1">Course Title *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.title}
+                    onChange={(e) => {
+                      const newTitle = e.target.value;
+                      setFormData((prev) => ({
+                        ...prev,
+                        title: newTitle,
+                        slug: prev.slug || newTitle.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+                      }));
+                    }}
+                    placeholder="e.g. Full Stack Cloud & Microservices Engineering Masterclass"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="sm:col-span-4">
+                  <label className="block font-bold text-slate-800 mb-1">URL Slug</label>
+                  <input
+                    type="text"
+                    value={formData.slug}
+                    onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                    placeholder="auto-generated-slug"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-mono focus:ring-2 focus:ring-brand-500 focus:outline-none bg-slate-50"
+                  />
+                </div>
               </div>
 
               {/* Subtitle */}
@@ -536,7 +685,7 @@ const AdminCourses = () => {
                   type="text"
                   value={formData.subtitle}
                   onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
-                  placeholder="e.g. React 19, Node.js, Kubernetes, AWS & Microservices Deployment."
+                  placeholder="e.g. Master React 19, Node.js, Kubernetes, AWS & Microservices Deployment."
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"
                 />
               </div>
@@ -578,26 +727,36 @@ const AdminCourses = () => {
                 </div>
               </div>
 
-              {/* Duration, Price & Discount Price */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Duration, Total Lectures, Regular Price & Offer Price */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div>
                   <label className="block font-bold text-slate-800 mb-1">Duration</label>
                   <input
                     type="text"
                     value={formData.duration}
                     onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                    placeholder="e.g. 100 Hours (12 Weeks)"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                    placeholder="e.g. 80 Hours (10 Weeks)"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-800 mb-1">Regular Price ($ / ₹)</label>
+                  <label className="block font-bold text-slate-800 mb-1">Total Lectures</label>
+                  <input
+                    type="number"
+                    value={formData.totalLectures}
+                    onChange={(e) => setFormData({ ...formData, totalLectures: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1">Regular Price ($)</label>
                   <input
                     type="number"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"
                   />
                 </div>
 
@@ -607,8 +766,49 @@ const AdminCourses = () => {
                     type="number"
                     value={formData.discountPrice}
                     onChange={(e) => setFormData({ ...formData, discountPrice: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"
                   />
+                </div>
+              </div>
+
+              {/* Course Status & Visibility Controls */}
+              <div className="p-4 rounded-2xl bg-brand-50/40 border border-brand-100 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <label className="font-bold text-slate-800">Status:</label>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, isPublished: !formData.isPublished })}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                      formData.isPublished
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    {formData.isPublished ? <CheckCircle2 className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                    <span>{formData.isPublished ? 'Published & Live' : 'Draft / Inactive (Hidden)'}</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-6">
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.isFeatured}
+                      onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
+                      className="w-4 h-4 rounded text-brand-600 focus:ring-brand-500"
+                    />
+                    <span className="font-bold text-slate-700">⭐ Featured Course</span>
+                  </label>
+
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.isPopular}
+                      onChange={(e) => setFormData({ ...formData, isPopular: e.target.checked })}
+                      className="w-4 h-4 rounded text-brand-600 focus:ring-brand-500"
+                    />
+                    <span className="font-bold text-slate-700">🔥 Popular Badge</span>
+                  </label>
                 </div>
               </div>
 
@@ -623,7 +823,7 @@ const AdminCourses = () => {
                   )}
                 </label>
                 <p className="text-[11px] text-slate-500">
-                  Upload the official PDF syllabus for this course. Students will be able to download it directly on the course page.
+                  Upload the official PDF syllabus for this course. Students will be able to unlock and download it on the course page.
                 </p>
 
                 <div className="flex items-center gap-3 pt-1">
@@ -662,7 +862,7 @@ const AdminCourses = () => {
                     value={formData.syllabusPdf && !formData.syllabusPdf.startsWith('data:') ? formData.syllabusPdf : ''}
                     onChange={(e) => setFormData({ ...formData, syllabusPdf: e.target.value, pdfFileName: 'Online PDF Link' })}
                     placeholder="https://example.com/syllabus.pdf"
-                    className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs"
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs bg-white"
                   />
                 </div>
               </div>
@@ -692,7 +892,32 @@ const AdminCourses = () => {
                 />
               </div>
 
-              {/* Course Thumbnail Image (Google Images URL / Upload File + Live Preview) */}
+              {/* Instructor Information */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1">Lead Instructor Name</label>
+                  <input
+                    type="text"
+                    value={formData.instructorName}
+                    onChange={(e) => setFormData({ ...formData, instructorName: e.target.value })}
+                    placeholder="e.g. Course Divine Senior Mentor"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1">Instructor Designation</label>
+                  <input
+                    type="text"
+                    value={formData.instructorTitle}
+                    onChange={(e) => setFormData({ ...formData, instructorTitle: e.target.value })}
+                    placeholder="e.g. Lead Industry Architect"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Course Thumbnail Image */}
               <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="block font-bold text-slate-900 text-xs">
@@ -800,7 +1025,7 @@ const AdminCourses = () => {
 
             <div className="space-y-4 text-xs">
               <p className="text-slate-600">
-                Paste your course data below in **JSON** format or **CSV** (Comma-separated lines).
+                Paste your course data below in <strong>JSON</strong> format or <strong>CSV</strong> (Comma-separated lines).
               </p>
 
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-[11px] text-slate-500 font-mono space-y-1">

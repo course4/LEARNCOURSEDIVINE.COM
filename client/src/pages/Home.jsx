@@ -149,7 +149,7 @@ const Home = () => {
 
   useEffect(() => {
     const syncCourses = () => {
-      setCourses(getLiveCourses());
+      setCourses(getLiveCourses().filter((c) => c.isPublished !== false));
     };
 
     syncCourses();
@@ -157,11 +157,11 @@ const Home = () => {
     fetchLiveCoursesFromApi()
       .then((data) => {
         if (Array.isArray(data)) {
-          setCourses(data);
+          setCourses(data.filter((c) => c.isPublished !== false));
         }
       })
       .catch(() => {
-        setCourses(getLiveCourses());
+        setCourses(getLiveCourses().filter((c) => c.isPublished !== false));
       });
 
     window.addEventListener('cd_courses_updated', syncCourses);

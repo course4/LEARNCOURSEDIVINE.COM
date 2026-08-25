@@ -185,6 +185,10 @@ const createCourse = async (req, res, next) => {
     courseData.slug = slug;
     courseData.price = Number(courseData.price) || 499;
     courseData.discountPrice = Number(courseData.discountPrice) || courseData.price || 399;
+    if (courseData.level === 'Beginner to Advanced') {
+      // Keep compatible with both strict enum and relaxed schemas
+      courseData.level = 'Beginner';
+    }
     if (courseData.isPublished === undefined) {
       courseData.isPublished = true;
     }
@@ -397,9 +401,33 @@ const addCourseReview = async (req, res, next) => {
 
     await course.save();
 
-    res.status(201).json({
+// @desc    Toggle course status (Active/Inactive) (Admin)
+// @route   PATCH /api/courses/:id/status
+// @access  Public / Admin
+const toggleCourseStatus = async (req, res, next) => {
+  try {
+    const isObjectId = mongoose.Types.ObjectId.isValid(req.params.id);
+    const query = isObjectId ? { _id: req.params.id } : { slug: req.params.id };
+
+    let course = await Course.findOne(query);
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
+      });
+    }
+
+    if (req.body.isPublished !== undefined) {
+      course.isPublished = Boolean(req.body.isPublished);
+    } else {
+      course.isPublished = !course.isPublished;
+    }
+
+    await course.save();
+
+    res.json({
       success: true,
-      message: 'Review added successfully',
+      message: `Course ${course.isPublished ? 'published & live' : 'unpublished & hidden'}`,
       data: course
     });
   } catch (error) {
@@ -414,7 +442,9 @@ module.exports = {
   createCourse,
   bulkCreateCourses,
   updateCourse,
+  toggleCourseStatus,
   deleteCourse,
   clearAllCourses,
   addCourseReview
 };
+

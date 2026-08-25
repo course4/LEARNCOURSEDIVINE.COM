@@ -1743,6 +1743,27 @@ export const deleteCourseLive = async (courseId) => {
   return true;
 };
 
+export const toggleCourseStatusLive = async (courseId, currentStatus) => {
+  const newStatus = currentStatus !== undefined ? !currentStatus : false;
+  const customCourses = safeStorageRead('cd_custom_courses', []);
+  const idx = customCourses.findIndex(c => c._id === courseId || c.slug === courseId);
+  if (idx >= 0) {
+    customCourses[idx] = { ...customCourses[idx], isPublished: newStatus };
+    localStorage.setItem('cd_custom_courses', JSON.stringify(customCourses));
+    broadcastCoursesUpdate(customCourses);
+  }
+
+  try {
+    const adminToken = await getValidAdminToken();
+    const config = adminToken ? { headers: { Authorization: `Bearer ${adminToken}` } } : {};
+    await api.patch(`/courses/${courseId}/status`, { isPublished: newStatus }, config);
+  } catch (err) {
+    console.error('Status toggle API warning:', err.message);
+  }
+
+  return newStatus;
+};
+
 export const clearAllCoursesLive = async () => {
   localStorage.setItem('cd_custom_courses', JSON.stringify([]));
   broadcastCoursesUpdate([]);

@@ -66,7 +66,7 @@ const Courses = () => {
   }, [search, selectedCategory, selectedLevel, sortBy]);
 
   const filterAndSetCourses = () => {
-    let list = getLiveCourses();
+    let list = getLiveCourses().filter((c) => c.isPublished !== false);
 
     // 1. Instant Multi-keyword Search Matching
     if (search && search.trim()) {
