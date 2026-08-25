@@ -74,7 +74,7 @@ const AdminCourses = () => {
     slug: '',
     subtitle: '',
     category: 'Software & Web Development',
-    level: 'Beginner to Advanced',
+    level: 'Beginner',
     duration: '80 Hours (10 Weeks)',
     totalLectures: 45,
     price: 499,
@@ -305,7 +305,7 @@ const AdminCourses = () => {
       slug: '',
       subtitle: '',
       category: 'Software & Web Development',
-      level: 'Beginner to Advanced',
+      level: 'Beginner',
       duration: '80 Hours (10 Weeks)',
       totalLectures: 45,
       price: 499,
@@ -886,11 +886,10 @@ const AdminCourses = () => {
                     onChange={(e) => setFormData({ ...formData, level: e.target.value })}
                     className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none bg-white"
                   >
-                    <option>Beginner</option>
-                    <option>Intermediate</option>
-                    <option>Advanced</option>
-                    <option>Beginner to Advanced</option>
-                    <option>All Levels</option>
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                    <option value="All Levels">All Levels</option>
                   </select>
                 </div>
               </div>

@@ -1655,9 +1655,15 @@ export const saveCourseLive = async (courseData) => {
   const isExistingMongoCourse = courseData._id && !String(courseData._id).startsWith('c_') && /^[0-9a-fA-F]{24}$/.test(courseData._id);
   const slug = courseData.slug || courseData.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
   
+  let safeLevel = courseData.level || 'Beginner';
+  if (safeLevel === 'Beginner to Advanced' || !['Beginner', 'Intermediate', 'Advanced', 'All Levels'].includes(safeLevel)) {
+    safeLevel = 'Beginner';
+  }
+
   const payload = {
     ...courseData,
     slug,
+    level: safeLevel,
     isPublished: courseData.isPublished !== undefined ? courseData.isPublished : true,
     price: Number(courseData.price) || 499,
     discountPrice: Number(courseData.discountPrice) || Number(courseData.price) || 399
