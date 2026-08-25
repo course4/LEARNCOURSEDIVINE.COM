@@ -1593,44 +1593,18 @@ export const getLiveCourses = () => {
 };
 
 export const fetchLiveCoursesFromApi = async () => {
-  const localCourses = getLiveCourses();
   try {
     const res = await api.get('/courses?limit=1000');
     if (res.data?.data && Array.isArray(res.data.data)) {
       const apiCourses = res.data.data;
-      
-      let mergedCourses = [];
-      if (apiCourses.length > 0) {
-        // Merge API courses with any local unsaved courses
-        const unsavedLocal = localCourses.filter(loc => 
-          !apiCourses.some(apiC => apiC._id === loc._id || apiC.slug === loc.slug || apiC.title?.toLowerCase() === loc.title?.toLowerCase())
-        );
-        mergedCourses = [...apiCourses, ...unsavedLocal];
-      } else {
-        // If API returned 0 courses but local storage has courses, PRESERVE local courses and try to push them to API!
-        mergedCourses = localCourses;
-        if (localCourses.length > 0) {
-          // Asynchronously push local courses to backend
-          localCourses.forEach(async (c) => {
-            try {
-              const payload = { ...c };
-              if (String(payload._id).startsWith('c_') || !/^[0-9a-fA-F]{24}$/.test(payload._id)) {
-                delete payload._id;
-              }
-              await api.post('/courses', payload);
-            } catch (e) {}
-          });
-        }
-      }
-
-      localStorage.setItem('cd_custom_courses', JSON.stringify(mergedCourses));
-      broadcastCoursesUpdate(mergedCourses);
-      return mergedCourses;
+      localStorage.setItem('cd_custom_courses', JSON.stringify(apiCourses));
+      broadcastCoursesUpdate(apiCourses);
+      return apiCourses;
     }
   } catch (err) {
-    // Offline or network warning - preserve existing courses
+    console.warn('API fetch notice:', err.message);
   }
-  return localCourses;
+  return getLiveCourses();
 };
 
 export const getLiveCourseBySlug = (slug) => {
@@ -1685,16 +1659,6 @@ export const saveCourseLive = async (courseData) => {
     isPublished: courseData.isPublished !== undefined ? courseData.isPublished : true,
     updatedAt: new Date().toISOString()
   };
-  
-  // Immediately save locally so UI never lags
-  const existingIdx = customCourses.findIndex(c => c._id === savedCourse._id || c.slug === savedCourse.slug);
-  if (existingIdx >= 0) {
-    customCourses[existingIdx] = savedCourse;
-  } else {
-    customCourses.unshift(savedCourse);
-  }
-  localStorage.setItem('cd_custom_courses', JSON.stringify(customCourses));
-  broadcastCoursesUpdate(customCourses);
 
   // Direct Cloud Sync to MongoDB Atlas on Render API
   try {
@@ -1712,16 +1676,18 @@ export const saveCourseLive = async (courseData) => {
         savedCourse = res.data.data;
       }
     }
-    // Update with real MongoDB ObjectId
-    const finalIdx = customCourses.findIndex(c => c._id === savedCourse._id || c.slug === savedCourse.slug);
-    if (finalIdx >= 0) {
-      customCourses[finalIdx] = savedCourse;
-      localStorage.setItem('cd_custom_courses', JSON.stringify(customCourses));
-      broadcastCoursesUpdate(customCourses);
-    }
   } catch (err) {
     console.error('MongoDB cloud sync notice:', err.response?.data?.message || err.message);
   }
+
+  const existingIdx = customCourses.findIndex(c => c._id === savedCourse._id || c.slug === savedCourse.slug);
+  if (existingIdx >= 0) {
+    customCourses[existingIdx] = savedCourse;
+  } else {
+    customCourses.unshift(savedCourse);
+  }
+  localStorage.setItem('cd_custom_courses', JSON.stringify(customCourses));
+  broadcastCoursesUpdate(customCourses);
   
   return savedCourse;
 };
