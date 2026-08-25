@@ -118,7 +118,7 @@ const CourseDetails = () => {
   };
 
   const downloadHandout = () => {
-    // If Admin uploaded an official PDF syllabus file or URL
+    // ONLY open the official PDF uploaded by the Admin
     if (course?.syllabusPdf) {
       const link = document.createElement('a');
       link.href = course.syllabusPdf;
@@ -128,70 +128,11 @@ const CourseDetails = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      showToast('Downloading official syllabus PDF...', 'success');
+      showToast('Opening official course syllabus PDF...', 'success');
       return;
     }
 
-    const syllabusText = course?.curriculum
-      ?.map(
-        (m, i) =>
-          `Module ${i + 1}: ${m.title} (${m.duration})\n` +
-          (m.description ? `  Overview: ${m.description}\n` : '') +
-          `  Topics Covered:\n` +
-          (m.topics?.map((t) => `    • ${t.title} [${t.duration}]`).join('\n') || '    • Practical Live Projects & Case Studies')
-      )
-      .join('\n\n') || 'Comprehensive curriculum with hands-on capstone projects.';
-
-    const outcomesText = course?.learningOutcomes?.map((o) => `  ✓ ${o}`).join('\n') || '  ✓ Industry standard technical competencies';
-
-    const content = `=====================================================
-COURSE DIVINE TECHNOLOGY PVT. LTD.
-Official Course Handout & Certified Curriculum
-=====================================================
-
-Course Title: ${course?.title || 'Masterclass'}
-Category: ${course?.category || 'Technical Certification'}
-Duration: ${course?.duration || '8-12 Weeks'}
-Accreditation: APSCHE / IAF / ISO 9001:2015 Verified
-Target Notification / Mentorship: coursedivine@gmail.com
-
------------------------------------------------------
-1. COURSE OVERVIEW
------------------------------------------------------
-${course?.overview || course?.description || 'Industry-led training with 1-on-1 mentorship.'}
-
------------------------------------------------------
-2. DETAILED MODULES & SYLLABUS BREAKDOWN
------------------------------------------------------
-${syllabusText}
-
------------------------------------------------------
-3. LEARNING OUTCOMES & INDUSTRY DELIVERABLES
------------------------------------------------------
-${outcomesText}
-
------------------------------------------------------
-4. CONTACT & COUNSELING
------------------------------------------------------
-Company: Course Divine Technology Pvt. Ltd.
-Address: Office No-3/23, Petrol Bunk, Land Mark Railway Station, near HP, near Simhachalam, Nad Junction, Gopalapatnam, Simhachalam, Visakhapatnam, Andhra Pradesh 530027
-Email: coursedivine@gmail.com
-Phone: +91 91003 48679
-Official Portal: https://www.learncoursedivine.com/
-
-=====================================================
-`;
-
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${(course?.slug || 'course-divine')}-handout.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    showToast('Course brochure and syllabus downloaded!', 'success');
+    showToast('Official syllabus PDF has not been attached for this course yet.', 'info');
   };
 
   const handleUnlockSubmit = async (e) => {
