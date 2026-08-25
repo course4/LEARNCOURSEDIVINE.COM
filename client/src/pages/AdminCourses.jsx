@@ -25,7 +25,10 @@ import {
   Clock,
   Layers,
   HelpCircle,
-  UserCheck
+  UserCheck,
+  Lock,
+  Unlock,
+  EyeOff
 } from 'lucide-react';
 import api, {
   fallbackStore,
@@ -37,9 +40,11 @@ import api, {
   bulkImportCoursesLive,
   toggleCourseStatusLive
 } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 
 const AdminCourses = () => {
+  const { user, isAdmin, login } = useAuth();
   const { showToast } = useNotification();
   const [courses, setCourses] = useState(() => getLiveCourses());
   const [search, setSearch] = useState('');
@@ -49,6 +54,12 @@ const AdminCourses = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [bulkDataText, setBulkDataText] = useState('');
   
+  // Security Passcode Lock State
+  const [adminPasswordInput, setAdminPasswordInput] = useState('');
+  const [showAdminPass, setShowAdminPass] = useState(false);
+  const [unlockError, setUnlockError] = useState('');
+  const [isUnlocking, setIsUnlocking] = useState(false);
+
   // Custom Delete Modal State
   const [deleteConfirmCourse, setDeleteConfirmCourse] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -347,10 +358,115 @@ const AdminCourses = () => {
     }
   };
 
+  const handleUnlockAdmin = async (e) => {
+    e.preventDefault();
+    if (!adminPasswordInput.trim()) {
+      setUnlockError('Please enter the administrator password.');
+      return;
+    }
+
+    setIsUnlocking(true);
+    setUnlockError('');
+
+    try {
+      const res = await login('admin@coursedivine.com', adminPasswordInput.trim());
+      if (res.success) {
+        showToast('Admin verification successful! Course Management unlocked.', 'success');
+        setAdminPasswordInput('');
+      } else {
+        setUnlockError(res.message || 'Incorrect password for Admin access.');
+      }
+    } catch (err) {
+      setUnlockError('Verification failed. Please check password and try again.');
+    } finally {
+      setIsUnlocking(false);
+    }
+  };
+
   const filteredCourses = courses.filter((c) =>
     (c.title || '').toLowerCase().includes(search.toLowerCase()) ||
     (c.category || '').toLowerCase().includes(search.toLowerCase())
   );
+
+  // If Admin is not logged in, show the Security Lock Screen
+  if (!isAdmin) {
+    return (
+      <div className="min-h-[75vh] flex items-center justify-center px-4 py-16">
+        <div className="bg-white rounded-3xl max-w-md w-full p-8 sm:p-10 border border-slate-200 shadow-2xl space-y-6 text-center animate-in fade-in zoom-in duration-300">
+          <div className="relative w-20 h-20 bg-gradient-to-tr from-brand-600 to-brand-400 text-white rounded-3xl flex items-center justify-center mx-auto shadow-xl shadow-brand-600/30">
+            <Lock className="w-10 h-10" />
+            <div className="absolute -top-1 -right-1 w-6 h-6 bg-amber-400 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-black text-slate-900 shadow-sm">
+              !
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-800 text-[11px] font-bold tracking-wide border border-amber-200">
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-600" /> Protected Administrator Portal
+            </div>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">Course Management Lock</h2>
+            <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
+              This section is restricted. Enter the Admin security password to manage courses, pricing, and curriculum.
+            </p>
+          </div>
+
+          {unlockError && (
+            <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2.5 text-left">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+              <span className="font-semibold">{unlockError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleUnlockAdmin} className="space-y-4 text-left">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                Admin Password <span className="text-slate-400 font-normal">(Default: Admin@123)</span>
+              </label>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                <input
+                  type={showAdminPass ? 'text' : 'password'}
+                  required
+                  value={adminPasswordInput}
+                  onChange={(e) => {
+                    setAdminPasswordInput(e.target.value);
+                    setUnlockError('');
+                  }}
+                  placeholder="Enter Admin Password"
+                  className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowAdminPass(!showAdminPass)}
+                  className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600 transition"
+                  tabIndex="-1"
+                >
+                  {showAdminPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isUnlocking}
+              className="w-full py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-sm shadow-lg shadow-brand-600/30 transition duration-200 flex items-center justify-center gap-2 disabled:opacity-75 cursor-pointer"
+            >
+              {isUnlocking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlock className="w-4 h-4" />}
+              <span>{isUnlocking ? 'Verifying...' : 'Unlock Course Management'}</span>
+            </button>
+          </form>
+
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+            <Link to="/" className="font-bold text-slate-500 hover:text-brand-600 transition flex items-center gap-1">
+              <ArrowLeft className="w-3.5 h-3.5" /> Public Website
+            </Link>
+            <span>Course Divine Security</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
