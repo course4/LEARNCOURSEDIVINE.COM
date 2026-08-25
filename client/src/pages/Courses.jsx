@@ -9,23 +9,20 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  ArrowRight
+  ArrowRight,
+  Loader2
 } from 'lucide-react';
 import api, { fallbackStore, getLiveCourses, fetchLiveCoursesFromApi } from '../services/api';
 import CourseCard from '../components/CourseCard';
 
 const Courses = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [courses, setCourses] = useState(() => getLiveCourses());
+  
+  // All published courses from single source of truth
+  const [allCourses, setAllCourses] = useState(() => getLiveCourses().filter((c) => c.isPublished !== false));
+  const [filteredCourses, setFilteredCourses] = useState(() => allCourses);
   const [categories, setCategories] = useState(fallbackStore.categories);
-  const [loading, setLoading] = useState(false);
-
-  // Initial fetch from live MongoDB Atlas backend
-  useEffect(() => {
-    fetchLiveCoursesFromApi().then(() => {
-      filterAndSetCourses();
-    });
-  }, []);
+  const [loading, setLoading] = useState(allCourses.length === 0);
 
   // Filters State
   const [search, setSearch] = useState(searchParams.get('search') || '');
@@ -37,6 +34,39 @@ const Courses = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const coursesPerPage = 9;
   const gridTopRef = useRef(null);
+
+  // Initial fetch from live MongoDB Atlas backend and real-time event listeners
+  useEffect(() => {
+    let isMounted = true;
+    
+    // Initial fetch from cloud database
+    fetchLiveCoursesFromApi()
+      .then((data) => {
+        if (isMounted) {
+          const live = (data || getLiveCourses()).filter((c) => c.isPublished !== false);
+          setAllCourses(live);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    // Cross-tab and in-tab live course update listener
+    const handleUpdate = () => {
+      if (isMounted) {
+        const live = getLiveCourses().filter((c) => c.isPublished !== false);
+        setAllCourses(live);
+        setLoading(false);
+      }
+    };
+
+    window.addEventListener('cd_courses_updated', handleUpdate);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('cd_courses_updated', handleUpdate);
+    };
+  }, []);
 
   // Sync URL search parameters with state
   useEffect(() => {
@@ -50,23 +80,9 @@ const Courses = () => {
     }
   }, [searchParams]);
 
-  // Synchronously filter and sort courses whenever any filter changes
+  // Synchronously filter and sort courses whenever any filter or allCourses change
   useEffect(() => {
-    filterAndSetCourses();
-    setCurrentPage(1);
-  }, [search, selectedCategory, selectedLevel, sortBy]);
-
-  // Listen to live course add/delete/update events from Admin
-  useEffect(() => {
-    const handleUpdate = () => {
-      filterAndSetCourses();
-    };
-    window.addEventListener('cd_courses_updated', handleUpdate);
-    return () => window.removeEventListener('cd_courses_updated', handleUpdate);
-  }, [search, selectedCategory, selectedLevel, sortBy]);
-
-  const filterAndSetCourses = () => {
-    let list = getLiveCourses().filter((c) => c.isPublished !== false);
+    let list = [...allCourses];
 
     // 1. Instant Multi-keyword Search Matching
     if (search && search.trim()) {
@@ -129,12 +145,12 @@ const Courses = () => {
       list.sort((a, b) => (b.rating || 0) - (a.rating || 0));
     }
 
-    setCourses(list);
-  };
+    setFilteredCourses(list);
+    setCurrentPage(1);
+  }, [allCourses, search, selectedCategory, selectedLevel, sortBy]);
 
   const handleSearchSubmit = (e) => {
     if (e) e.preventDefault();
-    filterAndSetCourses();
   };
 
 
@@ -149,10 +165,10 @@ const Courses = () => {
   };
 
   // Pagination calculations
-  const totalPages = Math.ceil(courses.length / coursesPerPage) || 1;
+  const totalPages = Math.ceil(filteredCourses.length / coursesPerPage) || 1;
   const indexOfLastCourse = currentPage * coursesPerPage;
   const indexOfFirstCourse = indexOfLastCourse - coursesPerPage;
-  const currentCourses = courses.slice(indexOfFirstCourse, indexOfLastCourse);
+  const currentCourses = filteredCourses.slice(indexOfFirstCourse, indexOfLastCourse);
 
   const handlePageChange = (pageNumber) => {
     if (pageNumber < 1 || pageNumber > totalPages) return;
@@ -231,7 +247,6 @@ const Courses = () => {
             </form>
           </div>
 
-
           {/* Level Filter */}
           <div className="md:col-span-3">
             <select
@@ -272,7 +287,7 @@ const Courses = () => {
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            All Tracks ({courses.length})
+            All Tracks ({allCourses.length})
           </button>
           {categories.map((cat) => (
             <button
@@ -301,17 +316,25 @@ const Courses = () => {
       {/* Results Header: Showing X–Y of Z */}
       <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-1">
         <span>
-          Showing <strong>{courses.length > 0 ? indexOfFirstCourse + 1 : 0}</strong>–
-          <strong>{Math.min(indexOfLastCourse, courses.length)}</strong> of <strong>{courses.length}</strong> courses
+          Showing <strong>{filteredCourses.length > 0 ? indexOfFirstCourse + 1 : 0}</strong>–
+          <strong>{Math.min(indexOfLastCourse, filteredCourses.length)}</strong> of <strong>{filteredCourses.length}</strong> courses
         </span>
         <span>Page {currentPage} of {totalPages}</span>
       </div>
 
-      {/* Paginated 3x3 Courses Grid */}
-      {currentCourses.length > 0 ? (
+      {/* Loading Skeleton vs Paginated 3x3 Courses Grid vs Empty State */}
+      {loading ? (
+        <div className="text-center py-24 bg-white rounded-3xl border border-slate-200 p-8 space-y-4 shadow-sm">
+          <Loader2 className="w-10 h-10 text-brand-600 animate-spin mx-auto" />
+          <h3 className="text-base font-extrabold text-slate-800">Synchronizing Course Catalog...</h3>
+          <p className="text-xs text-slate-400 max-w-sm mx-auto">
+            Fetching verified programs live from Course Divine database.
+          </p>
+        </div>
+      ) : currentCourses.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {currentCourses.map((course) => (
-            <CourseCard key={course._id} course={course} />
+            <CourseCard key={course._id || course.slug} course={course} />
           ))}
         </div>
       ) : (
@@ -323,7 +346,7 @@ const Courses = () => {
           </p>
           <button
             onClick={clearAllFilters}
-            className="mt-2 px-5 py-2.5 rounded-xl bg-brand-600 text-white font-bold text-xs"
+            className="mt-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-sm transition"
           >
             Show All Courses
           </button>
@@ -334,7 +357,7 @@ const Courses = () => {
       {totalPages > 1 && (
         <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 select-none">
           <div className="text-xs text-slate-500 font-medium">
-            Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong> ({courses.length} Total Courses)
+            Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong> ({filteredCourses.length} Total Courses)
           </div>
 
           <div className="flex items-center gap-1.5">
