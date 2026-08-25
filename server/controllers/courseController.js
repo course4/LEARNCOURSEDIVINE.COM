@@ -401,6 +401,16 @@ const addCourseReview = async (req, res, next) => {
 
     await course.save();
 
+    res.status(201).json({
+      success: true,
+      message: 'Review added successfully',
+      data: course
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Toggle course status (Active/Inactive) (Admin)
 // @route   PATCH /api/courses/:id/status
 // @access  Public / Admin
