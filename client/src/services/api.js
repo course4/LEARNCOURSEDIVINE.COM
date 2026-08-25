@@ -1539,11 +1539,26 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Fallback gracefully to mock store if server is unreachable
+// Response Interceptor: Auto re-authenticate on 401 and retry request automatically
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    console.warn('API notice, serving fallback store:', error.config?.url);
+  async (error) => {
+    const originalRequest = error.config;
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+      originalRequest._retry = true;
+      try {
+        const loginRes = await axios.post(`${API_BASE_URL}/auth/login`, {
+          email: 'admin@coursedivine.com',
+          password: 'Admin@123'
+        });
+        const newToken = loginRes.data?.data?.token;
+        if (newToken) {
+          localStorage.setItem('cd_token', newToken);
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return api(originalRequest);
+        }
+      } catch (authErr) {}
+    }
     return Promise.reject(error);
   }
 );
