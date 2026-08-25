@@ -231,8 +231,8 @@ const AdminCourses = () => {
 
   const handleSaveCourse = async (e) => {
     e.preventDefault();
-    if (!formData.title.trim() || !formData.description.trim()) {
-      showToast('Please fill in Course Title and Description', 'error');
+    if (!formData.title.trim()) {
+      showToast('Please enter a Course Title', 'error');
       return;
     }
 
@@ -251,16 +251,19 @@ const AdminCourses = () => {
         ? formData.slug.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
         : formData.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
+      const desc = formData.description.trim() || `Comprehensive masterclass and industry certification program in ${formData.title.trim()} with live interactive mentorship, hands-on projects, and career placement assistance.`;
+
       const coursePayload = {
         ...formData,
         title: formData.title.trim(),
         slug,
+        description: desc,
+        overview: formData.overview || desc,
         price: Number(formData.price) || 499,
         discountPrice: Number(formData.discountPrice) || Number(formData.price) || 399,
         totalLectures: Number(formData.totalLectures) || 45,
         thumbnail: formData.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80',
         highlights: highlightsArray,
-        overview: formData.overview || formData.description,
         isPublished: formData.isPublished !== undefined ? formData.isPublished : true,
         isFeatured: Boolean(formData.isFeatured),
         isPopular: Boolean(formData.isPopular),
@@ -1034,9 +1037,10 @@ const AdminCourses = () => {
 
               {/* Description */}
               <div>
-                <label className="block font-bold text-slate-800 mb-1">Course Description & Overview *</label>
+                <label className="block font-bold text-slate-800 mb-1">
+                  Course Description & Overview <span className="text-slate-400 font-normal">(Optional — auto-generated if blank)</span>
+                </label>
                 <textarea
-                  required
                   rows={4}
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
