@@ -139,8 +139,41 @@ const AdminCourses = () => {
     reader.readAsDataURL(file);
   };
 
-  // Handle Course Image File Upload from Computer
-  const handleImageFileUpload = (e) => {
+  // Client-side image optimizer for fast cloud sync across all mobile devices
+  const compressImage = (file, maxWidth = 800, quality = 0.82) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Compress to lightweight web-ready JPEG (~80-120KB)
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+          resolve(compressedDataUrl);
+        };
+        img.onerror = (err) => reject(err);
+      };
+      reader.onerror = (err) => reject(err);
+    });
+  };
+
+  // Handle Course Image File Upload from Computer or Mobile Phone
+  const handleImageFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -149,23 +182,17 @@ const AdminCourses = () => {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      showToast('Image size should be less than 5MB', 'error');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
+    try {
+      showToast('Optimizing image for cloud database...', 'info');
+      const optimizedImage = await compressImage(file, 800, 0.82);
       setFormData((prev) => ({
         ...prev,
-        thumbnail: event.target?.result
+        thumbnail: optimizedImage
       }));
-      showToast('Course image attached successfully!', 'success');
-    };
-    reader.onerror = () => {
-      showToast('Error reading image file', 'error');
-    };
-    reader.readAsDataURL(file);
+      showToast('Course image attached and optimized for fast cloud loading!', 'success');
+    } catch (err) {
+      showToast('Error processing image. Try again.', 'error');
+    }
   };
 
   // Quick Status Toggle (Live vs Draft)
