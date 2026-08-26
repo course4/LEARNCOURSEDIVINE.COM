@@ -1718,15 +1718,9 @@ export const saveCourseLive = async (courseData) => {
     discountPrice: Number(courseData.discountPrice) || Number(courseData.price) || 399
   };
 
-  if (!isExistingMongoCourse) {
-    delete payload._id;
-  }
-  
   let savedCourse = {
-    ...courseData,
+    ...payload,
     _id: courseData._id || 'c_' + Date.now(),
-    slug,
-    isPublished: courseData.isPublished !== undefined ? courseData.isPublished : true,
     updatedAt: new Date().toISOString()
   };
 
@@ -1741,12 +1735,28 @@ export const saveCourseLive = async (courseData) => {
     const adminToken = await getValidAdminToken();
     const config = adminToken ? { headers: { Authorization: `Bearer ${adminToken}` } } : {};
 
-    if (isExistingMongoCourse) {
-      const res = await api.put(`/courses/${courseData._id}`, payload, config);
-      if (res.data?.data) {
-        savedCourse = res.data.data;
+    let targetIdentifier = null;
+    if (courseData._id && /^[0-9a-fA-F]{24}$/.test(String(courseData._id))) {
+      targetIdentifier = courseData._id;
+    } else if (courseData.slug) {
+      targetIdentifier = courseData.slug;
+    }
+
+    if (targetIdentifier) {
+      try {
+        const res = await api.put(`/courses/${targetIdentifier}`, payload, config);
+        if (res.data?.data) {
+          savedCourse = res.data.data;
+        }
+      } catch (putErr) {
+        delete payload._id;
+        const res = await api.post('/courses', payload, config);
+        if (res.data?.data) {
+          savedCourse = res.data.data;
+        }
       }
     } else {
+      delete payload._id;
       const res = await api.post('/courses', payload, config);
       if (res.data?.data) {
         savedCourse = res.data.data;
