@@ -14,14 +14,15 @@ import {
   ExternalLink,
   ChevronRight,
   Sparkles,
-  TrendingUp
+  TrendingUp,
+  ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import api, { fallbackStore } from '../services/api';
 
 const Dashboard = () => {
-  const { user, updateUserData } = useAuth();
+  const { user, isAdmin, updateUserData } = useAuth();
   const { showToast } = useNotification();
 
   const [activeTab, setActiveTab] = useState('courses');
@@ -169,28 +170,31 @@ const Dashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-      {/* Student Welcome Header Card */}
+      {/* Header Card */}
       <div className="bg-gradient-to-r from-brand-900 via-brand-800 to-navy-950 text-white rounded-3xl p-6 sm:p-10 shadow-xl relative overflow-hidden">
         <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6">
-          <div className="flex items-center gap-5">
-            <img
-              src={user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'}
-              alt={user?.name}
-              className="w-20 h-20 rounded-2xl object-cover border-2 border-brand-300 shadow-md"
-            />
+          <div className="flex items-center gap-4">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-brand-300">Student Portal</span>
-              <h1 className="text-2xl sm:text-3xl font-black">{user?.name}</h1>
-              <p className="text-xs text-brand-100/80 mt-0.5">{user?.email}</p>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-500/30 text-brand-200 border border-brand-400/30">
-                  Referral Code: {user?.referralCode || 'CDROHAN'}
-                </span>
-              </div>
+              <h1 className="text-2xl sm:text-3xl font-black">{user?.name || 'My Account'}</h1>
+              {isAdmin && (
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-amber-500/25 text-amber-300 border border-amber-400/30 uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+                    <ShieldCheck className="w-3.5 h-3.5 text-amber-400" /> Administrator Account (Restricted Access)
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex items-center gap-3">
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md transition flex items-center gap-1.5"
+              >
+                <ShieldCheck className="w-4 h-4 text-slate-950" /> Admin Portal
+              </Link>
+            )}
             <Link
               to="/courses"
               className="px-5 py-2.5 rounded-xl bg-white text-brand-900 font-bold text-xs shadow-md hover:bg-brand-50 transition"

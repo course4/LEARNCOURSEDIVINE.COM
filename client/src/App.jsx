@@ -172,7 +172,7 @@ function App() {
 
                     {/* Protected Admin Portal - Strict Guard */}
                     <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-                    <Route path="/admin/courses" element={<AdminCourses />} />
+                    <Route path="/admin/courses" element={<AdminRoute><AdminCourses /></AdminRoute>} />
                     <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
                     <Route path="/admin/internships" element={<AdminRoute><AdminInternships /></AdminRoute>} />
                     <Route path="/admin/enquiries" element={<AdminRoute><AdminEnquiries /></AdminRoute>} />

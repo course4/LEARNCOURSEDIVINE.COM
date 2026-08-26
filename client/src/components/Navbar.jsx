@@ -76,7 +76,7 @@ const Navbar = () => {
         <div className="flex items-center gap-4 text-[11px] text-slate-300/90 font-medium">
           <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Admissions & Hiring Open 2026</span>
+            <span>Admissions & Hiring Open</span>
           </span>
           <span className="text-slate-600">•</span>
           <a href="tel:+919100348679" className="hover:text-white transition">

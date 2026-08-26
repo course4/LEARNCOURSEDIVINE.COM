@@ -45,11 +45,15 @@ const registerUser = async (req, res, next) => {
       }
     }
 
+    // If this is the first registered account in an empty database, promote to admin
+    const isFirstAccount = (await User.countDocuments({})) === 0;
+
     const user = await User.create({
       name,
       email: email.toLowerCase(),
       phone: phone || '',
       password,
+      role: isFirstAccount ? 'admin' : 'user',
       referralCode: generatedRefCode,
       referredBy
     });
