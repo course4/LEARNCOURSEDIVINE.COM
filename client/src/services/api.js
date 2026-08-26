@@ -1620,9 +1620,25 @@ export const fetchLiveCoursesFromApi = async () => {
     const res = await api.get('/courses?limit=1000');
     if (res.data?.data && Array.isArray(res.data.data)) {
       const apiCourses = res.data.data;
-      localStorage.setItem('cd_custom_courses', JSON.stringify(apiCourses));
-      broadcastCoursesUpdate(apiCourses);
-      return apiCourses;
+      const localCourses = safeStorageRead('cd_custom_courses', []);
+
+      if (apiCourses.length > 0) {
+        // Merge API courses with local courses without losing any
+        const courseMap = new Map();
+        apiCourses.forEach((c) => {
+          if (c && (c.slug || c._id)) courseMap.set(c.slug || c._id, c);
+        });
+        localCourses.forEach((c) => {
+          if (c && (c.slug || c._id) && !courseMap.has(c.slug || c._id)) {
+            courseMap.set(c.slug || c._id, c);
+          }
+        });
+
+        const combined = Array.from(courseMap.values());
+        localStorage.setItem('cd_custom_courses', JSON.stringify(combined));
+        broadcastCoursesUpdate(combined);
+        return combined;
+      }
     }
   } catch (err) {
     console.warn('API fetch notice:', err.message);
