@@ -28,15 +28,18 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import logoImg from '../assets/logo.png';
-import api, { fallbackStore, getLiveCourses, getLiveCourseBySlug } from '../services/api';
-import { getPdfFromDb } from '../services/pdfStorage';
+import api, { fallbackStore, getLiveCourses, getLiveCourseBySlug, saveCourseLive } from '../services/api';
+import { getPdfFromDb, storePdfInDb } from '../services/pdfStorage';
+import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useNotification } from '../context/NotificationContext';
+import { Upload } from 'lucide-react';
 import CourseCard from '../components/CourseCard';
 
 const CourseDetails = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { user, isAdmin } = useAuth();
   const { addToCart, isInCart } = useCart();
   const { showToast } = useNotification();
 
@@ -118,6 +121,34 @@ const CourseDetails = () => {
     }
   };
 
+  const handleAdminDirectPdfUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !course) return;
+
+    if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+      showToast('Please upload a valid PDF document (.pdf)', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const dataUrl = event.target?.result;
+      await storePdfInDb(course.slug, dataUrl, file.name);
+      if (course._id) {
+        await storePdfInDb(course._id, dataUrl, file.name);
+      }
+      const updated = {
+        ...course,
+        syllabusPdf: dataUrl,
+        pdfFileName: file.name
+      };
+      setCourse(updated);
+      await saveCourseLive(updated);
+      showToast(`🎉 PDF "${file.name}" attached successfully! Now click "Download Course Handout" to download.`, 'success');
+    };
+    reader.readAsDataURL(file);
+  };
+
   const downloadHandout = async () => {
     if (!course) return;
 
@@ -180,74 +211,7 @@ const CourseDetails = () => {
       }
     }
 
-    // Fallback instant syllabus document if admin hasn't attached a custom file
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>${course.title || 'Course'} - Official Syllabus</title>
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 40px; color: #0f172a; max-width: 800px; margin: 0 auto; line-height: 1.6; }
-            .header { border-bottom: 2px solid #0284c7; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
-            h1 { font-size: 24px; color: #071F3F; margin: 0 0 8px 0; }
-            .badge { display: inline-block; padding: 4px 12px; background: #e0f2fe; color: #0369a1; border-radius: 20px; font-size: 12px; font-weight: bold; }
-            .section { margin-bottom: 24px; }
-            .section-title { font-size: 16px; font-weight: bold; color: #071F3F; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 12px; }
-            .module { background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid #0284c7; }
-            .module-title { font-weight: bold; font-size: 14px; margin-bottom: 4px; }
-            .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center; }
-            @media print { .no-print { display: none; } }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div>
-              <span class="badge">${course.category || 'Professional Track'}</span>
-              <h1 style="margin-top: 8px;">${course.title}</h1>
-              <p style="margin: 0; font-size: 13px; color: #64748b;">Duration: ${course.duration || '80 Hours'} • Lectures: ${course.totalLectures || 45}</p>
-            </div>
-            <button class="no-print" onclick="window.print()" style="padding: 8px 16px; background: #0284c7; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Print / Save PDF</button>
-          </div>
-          <div class="section">
-            <div class="section-title">Course Overview & Objectives</div>
-            <p>${course.overview || course.description || 'Comprehensive industry curriculum covering hands-on labs, live mentoring, and capstone project.'}</p>
-          </div>
-          <div class="section">
-            <div class="section-title">Curriculum Modules</div>
-            ${(course.curriculum && course.curriculum.length > 0)
-              ? course.curriculum.map((m, idx) => `
-                <div class="module">
-                  <div class="module-title">Module ${idx + 1}: ${m.title || 'Core Subject Foundation'}</div>
-                  <div style="font-size: 13px; color: #475569;">${m.description || 'Theory, practical architecture, hands-on tasks and assignment.'}</div>
-                </div>
-              `).join('')
-              : `
-                <div class="module">
-                  <div class="module-title">Module 1: Fundamentals & Architecture Setup</div>
-                  <div style="font-size: 13px; color: #475569;">Core concepts, tool installations, architecture design, and foundational workflows.</div>
-                </div>
-                <div class="module">
-                  <div class="module-title">Module 2: Practical Implementation & Live Industry Labs</div>
-                  <div style="font-size: 13px; color: #475569;">Hands-on coding exercises, deep-dive design patterns, best practices, and debugging.</div>
-                </div>
-                <div class="module">
-                  <div class="module-title">Module 3: Capstone Projects & Placement Mentorship</div>
-                  <div style="font-size: 13px; color: #475569;">Production-grade deployments, interview preparation, portfolio review, and certification.</div>
-                </div>
-              `
-            }
-          </div>
-          <div class="footer">
-            <p>Course Divine Technology Institute • Official Program Syllabus • Verified Handout</p>
-          </div>
-        </body>
-        </html>
-      `);
-      printWindow.document.close();
-      showToast('Opening official syllabus handout...', 'success');
-    }
+    showToast('⚠️ No PDF file has been attached yet for this course.', 'info');
   };
 
   const handleUnlockSubmit = async (e) => {
@@ -432,14 +396,29 @@ const CourseDetails = () => {
                   </p>
                 </div>
 
-                {/* Direct Handout Download Button */}
-                <button
-                  onClick={downloadHandout}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-700 hover:to-blue-700 text-white text-xs font-black transition shadow-md shadow-blue-500/20 shrink-0"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Download Course Handout</span>
-                </button>
+                {/* Handout Download & Admin Direct Attachment Actions */}
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {isAdmin && (
+                    <label className="cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 border border-amber-300 text-xs font-bold transition shadow-xs">
+                      <Upload className="w-4 h-4 text-amber-700" />
+                      <span>{course.syllabusPdf ? 'Replace Attached PDF (Admin)' : 'Attach PDF File (Admin)'}</span>
+                      <input
+                        type="file"
+                        accept=".pdf,application/pdf"
+                        onChange={handleAdminDirectPdfUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+
+                  <button
+                    onClick={downloadHandout}
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-700 hover:to-blue-700 text-white text-xs font-black transition shadow-md shadow-blue-500/20 shrink-0"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Download Course Handout</span>
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-3">
