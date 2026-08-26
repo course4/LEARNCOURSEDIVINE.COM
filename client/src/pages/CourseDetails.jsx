@@ -180,9 +180,13 @@ const CourseDetails = () => {
             byteArrays.push(new Uint8Array(byteNumbers));
           }
 
-          const blob = new Blob(byteArrays, { type: mime });
+          const blob = new Blob(byteArrays, { type: 'application/pdf' });
           const blobUrl = URL.createObjectURL(blob);
 
+          // 1. Open immediately in a new tab for instant reading in browser
+          window.open(blobUrl, '_blank');
+
+          // 2. Also trigger standard file download
           const link = document.createElement('a');
           link.href = blobUrl;
           link.download = `${(course.title || 'Course_Divine').replace(/[^a-zA-Z0-9]/g, '_')}_Official_Syllabus.pdf`;
@@ -190,11 +194,12 @@ const CourseDetails = () => {
           link.click();
           document.body.removeChild(link);
 
-          setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-          showToast('Downloading your official course syllabus PDF...', 'success');
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 120000);
+          showToast('Opening and downloading official syllabus PDF...', 'success');
           return;
         } else {
           // Standard URL
+          window.open(pdfData, '_blank');
           const link = document.createElement('a');
           link.href = pdfData;
           link.target = '_blank';
