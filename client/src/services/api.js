@@ -1659,8 +1659,8 @@ export const getValidAdminToken = async () => {
   }
   try {
     const res = await axios.post(`${API_BASE_URL}/auth/login`, {
-      email: 'coursedivine@admin',
-      password: '9876543210'
+      email: 'admin@coursedivine.com',
+      password: 'Admin@123'
     });
     if (res.data?.data?.token) {
       token = res.data.data.token;
@@ -1670,7 +1670,7 @@ export const getValidAdminToken = async () => {
   } catch (err) {
     try {
       const res2 = await axios.post(`${API_BASE_URL}/auth/login`, {
-        email: 'admin@coursedivine.com',
+        email: 'admin@learncoursedivine.com',
         password: 'Admin@123'
       });
       if (res2.data?.data?.token) {
