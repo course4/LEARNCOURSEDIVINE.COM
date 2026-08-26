@@ -432,104 +432,40 @@ const CourseDetails = () => {
                   </p>
                 </div>
 
-                {/* Handout Action Button */}
-                {isUnlocked ? (
-                  <button
-                    onClick={downloadHandout}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-300 text-xs font-black hover:bg-emerald-100 transition shadow-sm shrink-0"
-                  >
-                    <Download className="w-4 h-4 text-emerald-600" />
-                    <span>Download Course Handout</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => setShowUnlockModal(true)}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-blue-600 text-white text-xs font-black hover:from-brand-700 hover:to-blue-700 transition shadow-md shadow-blue-500/20 shrink-0"
-                  >
-                    <Lock className="w-4 h-4" />
-                    <span>Unlock Handout & Syllabus 🔒</span>
-                  </button>
-                )}
+                {/* Direct Handout Download Button */}
+                <button
+                  onClick={downloadHandout}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-700 hover:to-blue-700 text-white text-xs font-black transition shadow-md shadow-blue-500/20 shrink-0"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Download Course Handout</span>
+                </button>
               </div>
-
-              {/* Module Lock Notice Banner when locked */}
-              {!isUnlocked && (
-                <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 flex items-center justify-between gap-3 text-xs text-amber-900">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-amber-200/70 flex items-center justify-center shrink-0">
-                      <Lock className="w-4 h-4 text-amber-800" />
-                    </div>
-                    <div>
-                      <span className="font-extrabold block">Module 1 is free to preview.</span>
-                      <span className="text-amber-700 text-[11px]">Enter basic details to unlock all curriculum modules and download the official handout.</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setShowUnlockModal(true)}
-                    className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-black shrink-0 transition"
-                  >
-                    Unlock Now 🔒
-                  </button>
-                </div>
-              )}
 
               <div className="space-y-3">
                 {course.curriculum && course.curriculum.map((module, idx) => {
-                  const isModuleLocked = !isUnlocked && idx > 0;
-                  const isOpen = openModuleIndex === idx && !isModuleLocked;
+                  const isOpen = openModuleIndex === idx;
 
                   return (
                     <div
                       key={idx}
-                      className={`border rounded-2xl overflow-hidden transition-all duration-200 ${
-                        isModuleLocked ? 'border-slate-200 bg-slate-50/60 opacity-90' : 'border-slate-200'
-                      }`}
+                      className="border border-slate-200 rounded-2xl overflow-hidden transition-all duration-200"
                     >
                       <button
-                        onClick={() => {
-                          if (isModuleLocked) {
-                            setShowUnlockModal(true);
-                            showToast('🔒 Please enter your basic details to unlock full modules and download handout.', 'info');
-                          } else {
-                            setOpenModuleIndex(isOpen ? null : idx);
-                          }
-                        }}
+                        onClick={() => setOpenModuleIndex(isOpen ? null : idx)}
                         className="w-full px-5 py-4 bg-slate-50 hover:bg-brand-50/50 flex items-center justify-between text-left transition"
                       >
                         <div className="flex items-center gap-3">
-                          <span
-                            className={`w-7 h-7 rounded-lg font-bold text-xs flex items-center justify-center ${
-                              isModuleLocked
-                                ? 'bg-slate-300 text-slate-700'
-                                : 'bg-brand-600 text-white'
-                            }`}
-                          >
+                          <span className="w-7 h-7 rounded-lg font-bold text-xs flex items-center justify-center bg-brand-600 text-white">
                             {idx + 1}
                           </span>
                           <div>
-                            <div className="flex items-center gap-2">
-                              <h4 className="text-sm font-bold text-slate-900">{module.title}</h4>
-                              {isModuleLocked ? (
-                                <span className="px-2 py-0.5 rounded-md bg-amber-100/90 text-amber-800 text-[10px] font-black flex items-center gap-1 border border-amber-200">
-                                  <Lock className="w-2.5 h-2.5 text-amber-700" /> Locked
-                                </span>
-                              ) : (
-                                idx === 0 && (
-                                  <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 text-[10px] font-bold">
-                                    Free Preview
-                                  </span>
-                                )
-                              )}
-                            </div>
+                            <h4 className="text-sm font-bold text-slate-900">{module.title}</h4>
                             <span className="text-[11px] text-slate-500">{module.duration}</span>
                           </div>
                         </div>
 
-                        {isModuleLocked ? (
-                          <div className="p-1.5 rounded-lg bg-amber-100/80 text-amber-800">
-                            <Lock className="w-4 h-4" />
-                          </div>
-                        ) : isOpen ? (
+                        {isOpen ? (
                           <ChevronUp className="w-4 h-4 text-slate-500" />
                         ) : (
                           <ChevronDown className="w-4 h-4 text-slate-500" />
