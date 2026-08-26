@@ -980,23 +980,26 @@ const AdminCourses = () => {
               </div>
 
               {/* PDF Syllabus / Brochure Upload */}
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
-                <label className="block font-bold text-slate-900 text-xs flex items-center justify-between">
-                  <span>📄 Course Syllabus & Brochure PDF</span>
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-brand-600" />
+                    <span>Course Syllabus & Handout PDF</span>
+                  </label>
                   {formData.syllabusPdf && (
-                    <span className="text-[11px] text-emerald-600 font-bold flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> PDF Ready
+                    <span className="text-[11px] text-emerald-600 font-bold bg-emerald-100/70 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> PDF Attached
                     </span>
                   )}
-                </label>
-                <p className="text-[11px] text-slate-500">
-                  Upload the official PDF syllabus for this course. Students will be able to unlock and download it on the course page.
+                </div>
+                <p className="text-[11px] text-slate-500 leading-normal">
+                  Upload your official PDF syllabus document (.pdf). When students click "Download Course Handout", this exact file will open and download for them.
                 </p>
 
-                <div className="flex items-center gap-3 pt-1">
-                  <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold text-xs shadow-sm transition">
-                    <Upload className="w-4 h-4 text-brand-600" />
-                    <span>{formData.pdfFileName ? 'Replace PDF File' : 'Upload PDF File'}</span>
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md transition">
+                    <Upload className="w-4 h-4" />
+                    <span>{formData.syllabusPdf ? 'Replace Attached PDF' : 'Upload PDF Document'}</span>
                     <input
                       type="file"
                       accept=".pdf,application/pdf"
@@ -1006,15 +1009,32 @@ const AdminCourses = () => {
                   </label>
 
                   {formData.syllabusPdf && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-slate-700 max-w-xs truncate">
-                        {formData.pdfFileName || 'Custom Syllabus.pdf'}
+                    <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-emerald-300 shadow-xs">
+                      <span className="text-xs font-semibold text-slate-800 max-w-[200px] truncate">
+                        📄 {formData.pdfFileName || 'Official Syllabus.pdf'}
                       </span>
                       <button
                         type="button"
+                        onClick={() => {
+                          if (formData.syllabusPdf.startsWith('data:')) {
+                            const win = window.open();
+                            if (win) {
+                              win.document.write(`<iframe src="${formData.syllabusPdf}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+                            }
+                          } else {
+                            window.open(formData.syllabusPdf, '_blank');
+                          }
+                        }}
+                        className="text-[11px] font-bold text-brand-600 hover:underline px-1"
+                        title="Preview PDF"
+                      >
+                        Preview
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => setFormData({ ...formData, syllabusPdf: '', pdfFileName: '' })}
-                        className="text-rose-500 hover:text-rose-700 p-1"
-                        title="Remove PDF"
+                        className="text-rose-500 hover:text-rose-700 p-0.5 ml-1"
+                        title="Remove attached PDF"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -1022,14 +1042,23 @@ const AdminCourses = () => {
                   )}
                 </div>
 
-                <div className="pt-2">
-                  <label className="block text-[10px] text-slate-500 mb-1">Or paste external PDF URL (Google Drive / Cloud link):</label>
+                <div className="pt-2 border-t border-slate-200/60">
+                  <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">
+                    Or Direct Cloud PDF URL:
+                  </label>
                   <input
                     type="url"
                     value={formData.syllabusPdf && !formData.syllabusPdf.startsWith('data:') ? formData.syllabusPdf : ''}
-                    onChange={(e) => setFormData({ ...formData, syllabusPdf: e.target.value, pdfFileName: 'Online PDF Link' })}
-                    placeholder="https://example.com/syllabus.pdf"
-                    className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs bg-white"
+                    onChange={(e) => {
+                      const val = e.target.value.trim();
+                      if (val) {
+                        setFormData({ ...formData, syllabusPdf: val, pdfFileName: 'Online PDF Document' });
+                      } else if (!formData.syllabusPdf.startsWith('data:')) {
+                        setFormData({ ...formData, syllabusPdf: '', pdfFileName: '' });
+                      }
+                    }}
+                    placeholder="https://your-domain.com/syllabus.pdf"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
                   />
                 </div>
               </div>
