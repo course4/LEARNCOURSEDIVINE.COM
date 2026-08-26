@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
+import AuthStatusModal from '../components/AuthStatusModal';
 
 const safeJsonParse = (str, fallback = null) => {
   try {
@@ -14,6 +15,7 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [modalState, setModalState] = useState({ show: false, type: 'login', name: '', role: 'user' });
 
   // Load user from localStorage or API on initial render
   useEffect(() => {
@@ -52,6 +54,15 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
         localStorage.setItem('cd_token', userData.token);
         localStorage.setItem('cd_user', JSON.stringify(userData));
+        
+        const role = (userData.role === 'admin' || cleanEmail.includes('admin')) ? 'admin' : 'user';
+        setModalState({
+          show: true,
+          type: role === 'admin' ? 'admin_login' : 'login',
+          name: userData.name,
+          role
+        });
+
         return { success: true, user: userData };
       }
     } catch (error) {
@@ -74,6 +85,14 @@ export const AuthProvider = ({ children }) => {
             setUser(userData);
             localStorage.setItem('cd_token', userData.token);
             localStorage.setItem('cd_user', JSON.stringify(userData));
+
+            setModalState({
+              show: true,
+              type: 'admin_login',
+              name: userData.name,
+              role: 'admin'
+            });
+
             return { success: true, user: userData };
           }
         } catch (e) {}
@@ -83,12 +102,20 @@ export const AuthProvider = ({ children }) => {
           name: 'Course Divine Administrator',
           email: 'coursedivine@admin',
           role: 'admin',
-          avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Admin&backgroundColor=071F3F&textColor=ffffff',
+          avatar: '',
           token: 'admin_jwt_' + Date.now()
         };
         setUser(adminUser);
         localStorage.setItem('cd_token', adminUser.token);
         localStorage.setItem('cd_user', JSON.stringify(adminUser));
+
+        setModalState({
+          show: true,
+          type: 'admin_login',
+          name: adminUser.name,
+          role: 'admin'
+        });
+
         return { success: true, user: adminUser };
       } else {
         return { success: false, message: 'Incorrect password for Admin account.' };
@@ -108,6 +135,15 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
         localStorage.setItem('cd_token', userData.token);
         localStorage.setItem('cd_user', JSON.stringify(userData));
+
+        const role = (userData.role === 'admin' || cleanEmail.includes('admin')) ? 'admin' : 'user';
+        setModalState({
+          show: true,
+          type: role === 'admin' ? 'admin_login' : 'login',
+          name: userData.name,
+          role
+        });
+
         return { success: true, user: userData };
       } else {
         return { success: false, message: 'Incorrect password. Please try again.' };
@@ -125,7 +161,6 @@ export const AuthProvider = ({ children }) => {
     try {
       const email = googleProfile.email.trim().toLowerCase();
       const name = googleProfile.name?.trim() || email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
-      const avatar = googleProfile.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}&backgroundColor=071F3F&textColor=ffffff`;
 
       const db = safeJsonParse(localStorage.getItem('cd_registered_users_db'), []);
       let googleUser = db.find((u) => u.email && u.email.toLowerCase() === email);
@@ -136,7 +171,7 @@ export const AuthProvider = ({ children }) => {
           _id: 'usr_' + Date.now(),
           name,
           email,
-          avatar,
+          avatar: '',
           role: email.includes('admin') ? 'admin' : 'user',
           authProvider: 'google',
           phone: googleProfile.phone || '',
@@ -146,34 +181,25 @@ export const AuthProvider = ({ children }) => {
         };
         db.push(googleUser);
         localStorage.setItem('cd_registered_users_db', JSON.stringify(db));
-
-        // Dispatch registration notification to coursedivine@gmail.com
-        if (typeof window !== 'undefined') {
-          const payload = new FormData();
-          payload.append('Student Name', name);
-          payload.append('Registered Email', email);
-          payload.append('Auth Provider', 'Google One-Click');
-          payload.append('_subject', `New Google Account Registration: ${name} (${email})`);
-          payload.append('_captcha', 'false');
-
-          fetch('https://formsubmit.co/ajax/coursedivine@gmail.com', {
-            method: 'POST',
-            body: payload
-          }).catch(() => null);
-        }
       }
 
       setUser(googleUser);
       localStorage.setItem('cd_token', googleUser.token);
       localStorage.setItem('cd_user', JSON.stringify(googleUser));
 
+      const role = googleUser.role === 'admin' ? 'admin' : 'user';
+      setModalState({
+        show: true,
+        type: role === 'admin' ? 'admin_login' : 'login',
+        name: googleUser.name,
+        role
+      });
+
       return { success: true, user: googleUser };
     } catch (err) {
       return { success: false, message: 'Google authentication failed. Please try again.' };
     }
   };
-
-
 
   const register = async (name, email, password, phone, referralCode) => {
     const cleanEmail = email.trim().toLowerCase();
@@ -186,6 +212,15 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
         localStorage.setItem('cd_token', userData.token);
         localStorage.setItem('cd_user', JSON.stringify(userData));
+
+        const role = userData.role === 'admin' ? 'admin' : 'user';
+        setModalState({
+          show: true,
+          type: role === 'admin' ? 'admin_login' : 'register',
+          name: userData.name,
+          role
+        });
+
         return { success: true, user: userData };
       }
     } catch (error) {
@@ -203,11 +238,11 @@ export const AuthProvider = ({ children }) => {
       _id: 'usr_' + Date.now(),
       name: cleanName,
       email: cleanEmail,
-      password, // securely stored for this account
+      password,
       phone: phone || '',
       role: (cleanEmail.includes('admin') || cleanEmail.startsWith('admin@')) ? 'admin' : 'user',
       referralCode: referralCode || ('CD' + Math.random().toString(36).substring(2, 8).toUpperCase()),
-      avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(cleanName)}&backgroundColor=071F3F&textColor=ffffff`,
+      avatar: '',
       registeredAt: new Date().toISOString(),
       token: 'jwt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8)
     };
@@ -219,13 +254,31 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('cd_token', newUserData.token);
     localStorage.setItem('cd_user', JSON.stringify(newUserData));
 
+    const role = newUserData.role === 'admin' ? 'admin' : 'user';
+    setModalState({
+      show: true,
+      type: role === 'admin' ? 'admin_login' : 'register',
+      name: newUserData.name,
+      role
+    });
+
     return { success: true, user: newUserData };
   };
 
   const logout = () => {
-    setUser(null);
-    localStorage.removeItem('cd_token');
-    localStorage.removeItem('cd_user');
+    setModalState({
+      show: true,
+      type: 'logout',
+      name: user?.name || '',
+      role: isUserAdmin ? 'admin' : 'user'
+    });
+
+    setTimeout(() => {
+      setUser(null);
+      localStorage.removeItem('cd_token');
+      localStorage.removeItem('cd_user');
+      window.location.hash = '#/';
+    }, 1200);
   };
 
   const updateUserData = (updatedData) => {
@@ -263,6 +316,10 @@ export const AuthProvider = ({ children }) => {
       }}
     >
       {children}
+      <AuthStatusModal
+        state={modalState}
+        onClose={() => setModalState({ show: false, type: 'login', name: '', role: 'user' })}
+      />
     </AuthContext.Provider>
   );
 };
