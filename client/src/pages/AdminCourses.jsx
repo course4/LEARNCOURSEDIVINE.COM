@@ -40,7 +40,7 @@ import api, {
   bulkImportCoursesLive,
   toggleCourseStatusLive
 } from '../services/api';
-import { storePdfInDb } from '../services/pdfStorage';
+import { storePdfInDb, getPdfFromDb } from '../services/pdfStorage';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 
@@ -236,6 +236,44 @@ const AdminCourses = () => {
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleOpenEditModal = async (c) => {
+    setEditingCourse(c);
+    let pdf = c.syllabusPdf || '';
+    let fileName = c.pdfFileName || (pdf ? 'Attached Syllabus.pdf' : '');
+
+    if (!pdf || pdf === 'indexeddb_ref') {
+      const storedPdf = (await getPdfFromDb(c.slug)) || (await getPdfFromDb(c._id));
+      if (storedPdf && storedPdf.pdfData) {
+        pdf = storedPdf.pdfData;
+        fileName = storedPdf.fileName || 'Attached Syllabus.pdf';
+      }
+    }
+
+    setFormData({
+      title: c.title || '',
+      slug: c.slug || '',
+      subtitle: c.subtitle || '',
+      category: c.category || 'Software & Web Development',
+      level: c.level || 'Beginner to Advanced',
+      duration: c.duration || '80 Hours (10 Weeks)',
+      totalLectures: c.totalLectures || 45,
+      price: c.price || 499,
+      discountPrice: c.discountPrice || 399,
+      description: c.description || c.overview || '',
+      overview: c.overview || c.description || '',
+      thumbnail: c.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80',
+      syllabusPdf: pdf,
+      pdfFileName: fileName,
+      highlights: Array.isArray(c.highlights) ? c.highlights.join('\n') : (c.highlights || ''),
+      isPublished: c.isPublished !== false,
+      isFeatured: Boolean(c.isFeatured),
+      isPopular: Boolean(c.isPopular),
+      instructorName: c.instructor?.name || 'Course Divine Senior Mentor',
+      instructorTitle: c.instructor?.title || 'Lead Industry Architect'
+    });
+    setShowAddModal(true);
   };
 
   const handleSaveCourse = async (e) => {
@@ -709,32 +747,7 @@ const AdminCourses = () => {
                             <Eye className="w-4 h-4" />
                           </Link>
                           <button
-                            onClick={() => {
-                              setEditingCourse(c);
-                              setFormData({
-                                title: c.title || '',
-                                slug: c.slug || '',
-                                subtitle: c.subtitle || '',
-                                category: c.category || 'Software & Web Development',
-                                level: c.level || 'Beginner to Advanced',
-                                duration: c.duration || '80 Hours (10 Weeks)',
-                                totalLectures: c.totalLectures || 45,
-                                price: c.price || 499,
-                                discountPrice: c.discountPrice || 399,
-                                description: c.description || c.overview || '',
-                                overview: c.overview || c.description || '',
-                                thumbnail: c.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80',
-                                syllabusPdf: c.syllabusPdf || '',
-                                pdfFileName: c.syllabusPdf ? 'Attached Syllabus' : '',
-                                highlights: Array.isArray(c.highlights) ? c.highlights.join('\n') : (c.highlights || ''),
-                                isPublished: c.isPublished !== false,
-                                isFeatured: Boolean(c.isFeatured),
-                                isPopular: Boolean(c.isPopular),
-                                instructorName: c.instructor?.name || 'Course Divine Senior Mentor',
-                                instructorTitle: c.instructor?.title || 'Lead Industry Architect'
-                              });
-                              setShowAddModal(true);
-                            }}
+                            onClick={() => handleOpenEditModal(c)}
                             className="p-1.5 rounded-lg text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition"
                             title="Edit Course"
                           >
