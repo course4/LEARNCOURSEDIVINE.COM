@@ -149,7 +149,7 @@ const courseSchema = new mongoose.Schema(
       default: true
     }
   },
-  { timestamps: true }
+  { timestamps: true, strict: false }
 );
 
 // Indexes for fast searching
