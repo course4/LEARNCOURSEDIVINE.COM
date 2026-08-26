@@ -176,6 +176,10 @@ const createCourse = async (req, res, next) => {
     const { title, category } = courseData;
     let slug = courseData.slug ? slugify(courseData.slug) : slugify(title || 'course');
 
+    // Auto-populate description and category if omitted
+    courseData.description = (courseData.description && courseData.description.trim()) || courseData.overview || `Comprehensive masterclass and industry certification in ${title || 'Technology'} with live mentorship and practical labs.`;
+    courseData.category = category || 'Software & Web Development';
+
     // Check duplicate slug and make unique
     const existingSlug = await Course.findOne({ slug });
     if (existingSlug) {

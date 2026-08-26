@@ -50,7 +50,7 @@ const courseSchema = new mongoose.Schema(
     },
     description: {
       type: String,
-      required: [true, 'Course description is required']
+      default: 'Comprehensive masterclass and industry certification program with live interactive mentorship and practical labs.'
     },
     overview: {
       type: String,
@@ -58,7 +58,7 @@ const courseSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      required: [true, 'Category is required'],
+      default: 'Software & Web Development',
       trim: true
     },
     thumbnail: {

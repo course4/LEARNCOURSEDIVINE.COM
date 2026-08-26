@@ -1703,9 +1703,15 @@ export const saveCourseLive = async (courseData) => {
     safeLevel = 'Beginner';
   }
 
+  const desc = (courseData.description && courseData.description.trim()) || (courseData.overview && courseData.overview.trim()) || `Masterclass and comprehensive industry certification program in ${courseData.title || 'Technology'}.`;
+
   const payload = {
     ...courseData,
+    title: courseData.title.trim(),
     slug,
+    description: desc,
+    overview: (courseData.overview && courseData.overview.trim()) || desc,
+    category: courseData.category || 'Software & Web Development',
     level: safeLevel,
     isPublished: courseData.isPublished !== undefined ? courseData.isPublished : true,
     price: Number(courseData.price) || 499,
