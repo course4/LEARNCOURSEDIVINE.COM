@@ -397,7 +397,9 @@ const CourseDetails = () => {
                     <BookOpen className="w-5 h-5 text-brand-600" /> Curriculum & Syllabus
                   </h2>
                   <p className="text-xs text-slate-500 mt-1">
-                    {course.curriculum?.length || 0} Modules • {course.totalLectures || 45} Practical Lectures
+                    {course.curriculum && course.curriculum.length > 0
+                      ? `${course.curriculum.length} Modules • ${course.totalLectures || 45} Practical Lectures`
+                      : `${course.totalLectures || 45} Practical Lectures • Official Syllabus Handout`}
                   </p>
                 </div>
 
@@ -426,68 +428,89 @@ const CourseDetails = () => {
                 </div>
               </div>
 
-              <div className="space-y-3">
-                {course.curriculum && course.curriculum.map((module, idx) => {
-                  const isOpen = openModuleIndex === idx;
+              {course.curriculum && course.curriculum.length > 0 ? (
+                <div className="space-y-3">
+                  {course.curriculum.map((module, idx) => {
+                    const isOpen = openModuleIndex === idx;
 
-                  return (
-                    <div
-                      key={idx}
-                      className="border border-slate-200 rounded-2xl overflow-hidden transition-all duration-200"
-                    >
-                      <button
-                        onClick={() => setOpenModuleIndex(isOpen ? null : idx)}
-                        className="w-full px-5 py-4 bg-slate-50 hover:bg-brand-50/50 flex items-center justify-between text-left transition"
+                    return (
+                      <div
+                        key={idx}
+                        className="border border-slate-200 rounded-2xl overflow-hidden transition-all duration-200"
                       >
-                        <div className="flex items-center gap-3">
-                          <span className="w-7 h-7 rounded-lg font-bold text-xs flex items-center justify-center bg-brand-600 text-white">
-                            {idx + 1}
-                          </span>
-                          <div>
-                            <h4 className="text-sm font-bold text-slate-900">{module.title}</h4>
-                            <span className="text-[11px] text-slate-500">{module.duration}</span>
+                        <button
+                          onClick={() => setOpenModuleIndex(isOpen ? null : idx)}
+                          className="w-full px-5 py-4 bg-slate-50 hover:bg-brand-50/50 flex items-center justify-between text-left transition"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="w-7 h-7 rounded-lg font-bold text-xs flex items-center justify-center bg-brand-600 text-white">
+                              {idx + 1}
+                            </span>
+                            <div>
+                              <h4 className="text-sm font-bold text-slate-900">{module.title}</h4>
+                              <span className="text-[11px] text-slate-500">{module.duration}</span>
+                            </div>
                           </div>
-                        </div>
 
-                        {isOpen ? (
-                          <ChevronUp className="w-4 h-4 text-slate-500" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 text-slate-500" />
-                        )}
-                      </button>
-
-                      {isOpen && (
-                        <div className="p-5 bg-white space-y-3 border-t border-slate-200">
-                          {module.description && (
-                            <p className="text-xs text-slate-500 italic mb-2">{module.description}</p>
+                          {isOpen ? (
+                            <ChevronUp className="w-4 h-4 text-slate-500" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-slate-500" />
                           )}
-                          <div className="space-y-2">
-                            {module.topics && module.topics.map((topic, tIdx) => (
-                              <div
-                                key={tIdx}
-                                className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/80 text-xs font-medium text-slate-700"
-                              >
-                                <div className="flex items-center gap-2.5">
-                                  <Play className="w-3.5 h-3.5 text-brand-600 shrink-0" />
-                                  <span>{topic.title}</span>
+                        </button>
+
+                        {isOpen && (
+                          <div className="p-5 bg-white space-y-3 border-t border-slate-200">
+                            {module.description && (
+                              <p className="text-xs text-slate-500 italic mb-2">{module.description}</p>
+                            )}
+                            <div className="space-y-2">
+                              {module.topics && module.topics.map((topic, tIdx) => (
+                                <div
+                                  key={tIdx}
+                                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/80 text-xs font-medium text-slate-700"
+                                >
+                                  <div className="flex items-center gap-2.5">
+                                    <Play className="w-3.5 h-3.5 text-brand-600 shrink-0" />
+                                    <span>{topic.title}</span>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    {topic.isFreePreview && (
+                                      <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                                        Free Preview
+                                      </span>
+                                    )}
+                                    <span className="text-slate-400 font-mono text-[11px]">{topic.duration}</span>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                  {topic.isFreePreview && (
-                                    <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
-                                      Free Preview
-                                    </span>
-                                  )}
-                                  <span className="text-slate-400 font-mono text-[11px]">{topic.duration}</span>
-                                </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/80 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-11 h-11 rounded-2xl bg-brand-50 text-brand-600 border border-brand-100 flex items-center justify-center shrink-0 shadow-xs">
+                      <FileText className="w-5 h-5" />
                     </div>
-                  );
-                })}
-              </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900">Official Course Syllabus & Curriculum Document</h4>
+                      <p className="text-xs text-slate-500 mt-0.5">Click the handout button to view and download the complete curriculum syllabus.</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={downloadHandout}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md shadow-brand-600/20 transition shrink-0"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Download Handout</span>
+                  </button>
+                </div>
+              )}
             </div>
 
 
