@@ -321,11 +321,9 @@ const Navbar = () => {
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                   className="flex items-center gap-2 p-1.5 pr-3 rounded-xl bg-[#0C2A52] hover:bg-brand-700/50 border border-brand-400/20 transition duration-200"
                 >
-                  <img
-                    src={user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
-                    alt={user?.name}
-                    className="w-7 h-7 rounded-lg object-cover border border-brand-300"
-                  />
+                  <div className="w-7 h-7 rounded-lg bg-brand-500 border border-brand-300/40 flex items-center justify-center text-white font-bold text-xs uppercase shadow-sm">
+                    {user?.name ? user.name.trim().charAt(0) : 'U'}
+                  </div>
                   <span className="hidden sm:inline text-xs font-semibold text-white max-w-[90px] truncate">
                     {user?.name?.split(' ')[0]}
                   </span>
