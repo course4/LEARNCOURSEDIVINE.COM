@@ -182,24 +182,28 @@ const CourseDetails = () => {
 
           const blob = new Blob(byteArrays, { type: 'application/pdf' });
           const blobUrl = URL.createObjectURL(blob);
+          const fileName = `${(course.title || 'Course_Divine').replace(/[^a-zA-Z0-9]/g, '_')}_Official_Syllabus.pdf`;
 
-          // 1. Open immediately in a new tab for instant reading in browser
-          window.open(blobUrl, '_blank');
-
-          // 2. Also trigger standard file download
+          // Trigger clean direct download on both mobile and desktop
           const link = document.createElement('a');
           link.href = blobUrl;
-          link.download = `${(course.title || 'Course_Divine').replace(/[^a-zA-Z0-9]/g, '_')}_Official_Syllabus.pdf`;
+          link.download = fileName;
+          link.setAttribute('download', fileName);
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
 
+          // For desktop browsers only, open in new tab (mobile blocks blob popups to about:blank)
+          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '');
+          if (!isMobile) {
+            window.open(blobUrl, '_blank');
+          }
+
           setTimeout(() => URL.revokeObjectURL(blobUrl), 120000);
-          showToast('Opening and downloading official syllabus PDF...', 'success');
+          showToast(isMobile ? '📥 Syllabus PDF downloaded to your phone! Tap to open.' : 'Opening & downloading official syllabus PDF...', 'success');
           return;
         } else {
           // Standard URL
-          window.open(pdfData, '_blank');
           const link = document.createElement('a');
           link.href = pdfData;
           link.target = '_blank';
