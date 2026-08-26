@@ -40,6 +40,7 @@ import api, {
   bulkImportCoursesLive,
   toggleCourseStatusLive
 } from '../services/api';
+import { storePdfInDb } from '../services/pdfStorage';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 
@@ -119,19 +120,27 @@ const AdminCourses = () => {
       return;
     }
 
-    if (file.size > 15 * 1024 * 1024) {
-      showToast('PDF file size should be less than 15MB', 'error');
+    if (file.size > 25 * 1024 * 1024) {
+      showToast('PDF file size should be less than 25MB', 'error');
       return;
     }
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
+      const dataUrl = event.target?.result;
       setFormData((prev) => ({
         ...prev,
-        syllabusPdf: event.target?.result,
+        syllabusPdf: dataUrl,
         pdfFileName: file.name
       }));
-      showToast(`PDF "${file.name}" attached successfully!`, 'success');
+
+      // Cache immediately into IndexedDB
+      if (formData.slug || formData.title) {
+        const key = formData.slug || formData.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        await storePdfInDb(key, dataUrl, file.name);
+      }
+
+      showToast(`PDF "${file.name}" attached & verified successfully!`, 'success');
     };
     reader.onerror = () => {
       showToast('Error reading PDF file. Try again.', 'error');

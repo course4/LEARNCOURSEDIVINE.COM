@@ -1571,6 +1571,8 @@ api.interceptors.response.use(
   }
 );
 
+import { storePdfInDb, getPdfFromDb } from './pdfStorage';
+
 // Helper for safely reading JSON from localStorage
 const safeStorageRead = (key, fallback) => {
   try {
@@ -1578,6 +1580,27 @@ const safeStorageRead = (key, fallback) => {
     return item ? JSON.parse(item) : fallback;
   } catch (e) {
     return fallback;
+  }
+};
+
+// Safe storage writer that prevents QuotaExceededError by offloading heavy PDFs to IndexedDB
+const safeStorageWrite = (key, data) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (err) {
+    console.warn('Storage quota limit reached, saving heavy binary files to IndexedDB...', err);
+    try {
+      if (Array.isArray(data)) {
+        const lightweight = data.map((item) => {
+          if (item && item.syllabusPdf && item.syllabusPdf.length > 20000) {
+            storePdfInDb(item.slug || item._id, item.syllabusPdf, item.pdfFileName || 'Syllabus.pdf');
+            return { ...item, syllabusPdf: 'indexeddb_ref' };
+          }
+          return item;
+        });
+        localStorage.setItem(key, JSON.stringify(lightweight));
+      }
+    } catch (e2) {}
   }
 };
 
@@ -1715,6 +1738,12 @@ export const saveCourseLive = async (courseData) => {
     updatedAt: new Date().toISOString()
   };
 
+  // Save PDF to IndexedDB immediately for instant offline/online retrieval
+  if (courseData.syllabusPdf && (courseData.syllabusPdf.startsWith('data:') || courseData.syllabusPdf.length > 50)) {
+    storePdfInDb(slug, courseData.syllabusPdf, courseData.pdfFileName || 'Official Syllabus.pdf');
+    storePdfInDb(savedCourse._id, courseData.syllabusPdf, courseData.pdfFileName || 'Official Syllabus.pdf');
+  }
+
   // Direct Cloud Sync to MongoDB Atlas on Render API
   try {
     const adminToken = await getValidAdminToken();
@@ -1741,7 +1770,7 @@ export const saveCourseLive = async (courseData) => {
   } else {
     customCourses.unshift(savedCourse);
   }
-  localStorage.setItem('cd_custom_courses', JSON.stringify(customCourses));
+  safeStorageWrite('cd_custom_courses', customCourses);
   broadcastCoursesUpdate(customCourses);
   
   return savedCourse;

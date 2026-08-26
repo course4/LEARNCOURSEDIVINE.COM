@@ -29,6 +29,7 @@ import {
 import confetti from 'canvas-confetti';
 import logoImg from '../assets/logo.png';
 import api, { fallbackStore, getLiveCourses, getLiveCourseBySlug } from '../services/api';
+import { getPdfFromDb } from '../services/pdfStorage';
 import { useCart } from '../context/CartContext';
 import { useNotification } from '../context/NotificationContext';
 import CourseCard from '../components/CourseCard';
@@ -117,12 +118,20 @@ const CourseDetails = () => {
     }
   };
 
-  const downloadHandout = () => {
+  const downloadHandout = async () => {
     if (!course) return;
 
-    const pdfData = course.syllabusPdf || course.curriculumPdf || '';
+    let pdfData = course.syllabusPdf || course.curriculumPdf || '';
 
-    if (pdfData && pdfData.trim()) {
+    // If PDF not directly attached or stored as reference, look up in high-capacity IndexedDB store
+    if (!pdfData || pdfData === 'indexeddb_ref' || (!pdfData.startsWith('data:') && !pdfData.startsWith('http'))) {
+      const storedPdf = (await getPdfFromDb(course.slug)) || (await getPdfFromDb(course._id));
+      if (storedPdf && storedPdf.pdfData) {
+        pdfData = storedPdf.pdfData;
+      }
+    }
+
+    if (pdfData && pdfData.trim() && pdfData !== 'indexeddb_ref') {
       try {
         if (pdfData.startsWith('data:')) {
           // Robust Base64 Data URL to Blob converter (supports desktop & mobile browsers)
@@ -150,8 +159,8 @@ const CourseDetails = () => {
           link.click();
           document.body.removeChild(link);
 
-          setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
-          showToast('Downloading official syllabus PDF...', 'success');
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+          showToast('Downloading your official course syllabus PDF...', 'success');
           return;
         } else {
           // Standard URL
