@@ -278,7 +278,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('cd_token');
       localStorage.removeItem('cd_user');
       window.location.hash = '#/';
-    }, 1200);
+    }, 10000);
   };
 
   const updateUserData = (updatedData) => {

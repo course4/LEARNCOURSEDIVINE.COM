@@ -4,10 +4,12 @@ import confetti from 'canvas-confetti';
 
 const AuthStatusModal = ({ state, onClose }) => {
   const [progress, setProgress] = useState(0);
+  const [secondsRemaining, setSecondsRemaining] = useState(10);
 
   useEffect(() => {
     if (!state?.show) {
       setProgress(0);
+      setSecondsRemaining(10);
       return;
     }
 
@@ -15,30 +17,39 @@ const AuthStatusModal = ({ state, onClose }) => {
     if (state.type === 'login' || state.type === 'admin_login' || state.type === 'register') {
       try {
         confetti({
-          particleCount: state.type === 'admin_login' ? 40 : 60,
-          spread: 70,
+          particleCount: state.type === 'admin_login' ? 50 : 70,
+          spread: 80,
           origin: { y: 0.6 },
           colors: state.type === 'admin_login' ? ['#F59E0B', '#10B981', '#3B82F6'] : ['#10B981', '#0EA5E9', '#6366F1']
         });
       } catch (e) {}
     }
 
+    const DURATION_MS = 10000; // 10 seconds
+    const STEP_MS = 100;
+
     const interval = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 100) {
+        const next = prev + (100 / (DURATION_MS / STEP_MS));
+        if (next >= 100) {
           clearInterval(interval);
           return 100;
         }
-        return prev + 10;
+        return Math.min(next, 100);
       });
-    }, 80);
+    }, STEP_MS);
+
+    const countdownInterval = setInterval(() => {
+      setSecondsRemaining((prev) => (prev > 1 ? prev - 1 : 1));
+    }, 1000);
 
     const timer = setTimeout(() => {
       if (onClose) onClose();
-    }, 1400);
+    }, DURATION_MS);
 
     return () => {
       clearInterval(interval);
+      clearInterval(countdownInterval);
       clearTimeout(timer);
     };
   }, [state]);
@@ -139,10 +150,23 @@ const AuthStatusModal = ({ state, onClose }) => {
 
         {/* Footer Status */}
         <div className="mt-4 flex items-center justify-between text-[11px] text-slate-400 font-medium">
-          <span>{isLogout ? 'Clearing tokens...' : 'Syncing credentials...'}</span>
+          <span>{isLogout ? `Signing out in ${secondsRemaining}s...` : `Redirecting in ${secondsRemaining}s...`}</span>
           <span className="font-bold text-white flex items-center gap-1">
-            {progress}% <ArrowRight className="w-3 h-3 text-brand-400 animate-pulse" />
+            {Math.round(progress)}% <ArrowRight className="w-3 h-3 text-brand-400 animate-pulse" />
           </span>
+        </div>
+
+        {/* Optional Fast-Forward Button */}
+        <div className="mt-5 pt-3 border-t border-white/10 flex justify-center">
+          <button
+            onClick={() => {
+              if (onClose) onClose();
+            }}
+            className="text-[11px] font-semibold text-brand-300 hover:text-white transition flex items-center gap-1 opacity-70 hover:opacity-100"
+          >
+            <span>{isLogout ? 'Proceed immediately' : 'Enter portal now'}</span>
+            <ArrowRight className="w-3 h-3" />
+          </button>
         </div>
 
       </div>
