@@ -38,7 +38,8 @@ import {
   project9DigitalMarketing,
   project10PythonSales,
   project11SolidworksGearbox,
-  project12Ecosystem3D
+  project12Ecosystem3D,
+  project13ScadaAutomation
 } from '../assets/gallery';
 
 export const projectsGalleryData = [
@@ -234,11 +235,29 @@ export const projectsGalleryData = [
     relatedCourseSlug: 'python-programming-data-analytics-certified-course',
     tags: ['Python', 'Pandas', 'Matplotlib', 'Plotly', '3D Surface Plot', 'EDA'],
     highlights: [
-      'Interactive 3D profit optimization surface against discount rates',
-      'Correlation matrix heatmap for sales vs quantity vs profit',
-      'Global sales geospatial choropleth map deployed on Streamlit'
+      'Interactive 3D roadmap bridging practical labs to corporate placement',
+      'Unified continuum covering CAD, FEA, Web, Data, AI & Automation',
+      'Certified portfolio projects built under direct expert guidance'
     ],
-    description: 'Advanced Python exploratory data analysis (EDA) pipeline delivering multi-dimensional revenue insights and statistical business modeling.'
+    description: 'Immersive visual representation of Course Divine’s industry progression continuum from foundational learning to production capstones and corporate hiring.'
+  },
+  {
+    id: 'p13-scada-industrial-automation',
+    title: 'Industrial PLC & SCADA Water Treatment Automation Dashboard',
+    category: 'Automation & Robotics',
+    domain: 'PLC, SCADA & IIoT Systems',
+    software: 'Siemens WinCC, TIA Portal, Modbus TCP, Node-RED',
+    timeTaken: '28 Hours',
+    rating: '4.9/5',
+    image: project13ScadaAutomation,
+    relatedCourseSlug: 'embedded-systems-iot-robotics-certified-course',
+    tags: ['Siemens PLC', 'WinCC SCADA', 'Modbus TCP', 'Node-RED', 'P&ID Telemetry', 'IIoT'],
+    highlights: [
+      'Real-time industrial water treatment HMI dashboard with live tank level gauges',
+      'Automated chemical dosing and backwash valve control logic via Siemens PLC',
+      'Modbus TCP/IP telemetry streaming flow rate, pressure, temperature, and TDS metrics'
+    ],
+    description: 'Complete industrial automation & telemetry system providing remote HMI monitoring, trend telemetry, and automated alarm management.'
   },
   {
     id: 'p12-course-divine-ecosystem',
