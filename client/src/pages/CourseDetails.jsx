@@ -464,7 +464,7 @@ const CourseDetails = () => {
               </h1>
 
               <p className="text-sm sm:text-base text-brand-100/80 leading-relaxed max-w-3xl">
-                {course.subtitle || (course.description ? (course.description.length > 180 ? course.description.slice(0, 180) + '...' : course.description) : '')}
+                {course.subtitle || "Master industry-relevant skills with live practical projects, expert mentorship, and recognized certification."}
               </p>
 
               {/* Ratings & Meta */}
@@ -479,12 +479,8 @@ const CourseDetails = () => {
                   <span>{course.enrolledCount || 350}+ Students Enrolled</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Globe className="w-4 h-4 text-brand-400" />
-                  <span>{course.language || 'English & Hindi'}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Clock className="w-4 h-4 text-brand-400" />
-                  <span>{course.duration}</span>
+                  <Award className="w-4 h-4 text-emerald-400" />
+                  <span>ISO & APSCHE Recognized</span>
                 </div>
               </div>
             </div>
@@ -503,7 +499,7 @@ const CourseDetails = () => {
                 <Sparkles className="w-5 h-5 text-brand-600" /> Course Overview
               </h2>
               <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
-                {course.overview || course.description}
+                {course.overview || "This comprehensive program is designed to take you from fundamentals to advanced industry application with hands-on projects and expert guidance. Click the handout button below to view and download the full official syllabus document."}
               </p>
 
               {/* Key Highlights */}
