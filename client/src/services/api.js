@@ -1643,11 +1643,9 @@ export const fetchLiveCoursesFromApi = async () => {
     const res = await api.get('/courses?limit=1000');
     if (res.data?.data && Array.isArray(res.data.data)) {
       const apiCourses = res.data.data;
-      if (apiCourses.length > 0) {
-        safeStorageWrite('cd_custom_courses', apiCourses);
-        broadcastCoursesUpdate(apiCourses);
-        return apiCourses;
-      }
+      safeStorageWrite('cd_custom_courses', apiCourses);
+      broadcastCoursesUpdate(apiCourses);
+      return apiCourses;
     }
   } catch (err) {
     console.warn('API fetch notice:', err.message);
