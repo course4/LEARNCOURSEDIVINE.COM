@@ -691,7 +691,16 @@ const broadcastCoursesUpdate = (courses) => {
 // Unified Synchronized Course Store Manager (Pure Direct MongoDB Atlas Cloud Sync)
 export const getLiveCourses = () => {
   const custom = safeStorageRead('cd_custom_courses', []);
-  return custom.filter(c => c && !String(c._id).startsWith('top-c') && !/^c[0-9]+$/.test(String(c._id)));
+  return custom
+    .filter(c => c && !String(c._id).startsWith('top-c') && !/^c[0-9]+$/.test(String(c._id)))
+    .map(c => {
+      const isDump = (txt) => txt && (txt.includes('2. Skills You Will Gain') || txt.includes('SYLLABUS:') || txt.length > 250);
+      return {
+        ...c,
+        overview: (isDump(c.overview) || c.overview === c.description) ? '' : c.overview,
+        subtitle: (isDump(c.subtitle) || c.subtitle === c.description) ? '' : c.subtitle
+      };
+    });
 };
 
 export const fetchLiveCoursesFromApi = async () => {
