@@ -464,7 +464,13 @@ const CourseDetails = () => {
               </h1>
 
               <p className="text-sm sm:text-base text-brand-100/80 leading-relaxed max-w-3xl">
-                {course.subtitle || "Master industry-relevant skills with live practical projects, expert mentorship, and recognized certification."}
+                {(() => {
+                  const sub = course.subtitle;
+                  if (sub && !sub.includes('2. Skills You Will Gain') && !sub.includes('SYLLABUS:') && sub !== course.description && sub.length <= 200) {
+                    return sub;
+                  }
+                  return "Master industry-relevant skills with live practical projects, expert mentorship, and recognized certification.";
+                })()}
               </p>
 
               {/* Ratings & Meta */}
@@ -499,7 +505,13 @@ const CourseDetails = () => {
                 <Sparkles className="w-5 h-5 text-brand-600" /> Course Overview
               </h2>
               <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
-                {course.overview || "This comprehensive program is designed to take you from fundamentals to advanced industry application with hands-on projects and expert guidance. Click the handout button below to view and download the full official syllabus document."}
+                {(() => {
+                  const ov = course.overview;
+                  if (ov && !ov.includes('2. Skills You Will Gain') && !ov.includes('SYLLABUS:') && ov !== course.description && ov.length <= 250) {
+                    return ov;
+                  }
+                  return "This comprehensive program is designed to take you from fundamentals to advanced industry application with hands-on projects and expert guidance. Click the handout button below to view and download the full official syllabus document.";
+                })()}
               </p>
 
               {/* Key Highlights */}
