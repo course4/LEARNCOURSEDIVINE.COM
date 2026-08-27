@@ -54,10 +54,11 @@ const CourseDetails = () => {
     return localStorage.getItem('cd_handout_unlocked') === 'true';
   });
   const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [showSyllabusModal, setShowSyllabusModal] = useState(false);
   const [unlockForm, setUnlockForm] = useState({
     name: '',
     email: '',
-    countryCode: '+1',
+    countryCode: '+91',
     phone: ''
   });
   const [isSubmittingUnlock, setIsSubmittingUnlock] = useState(false);
@@ -121,178 +122,100 @@ const CourseDetails = () => {
     }
   };
 
-  const handleAdminDirectPdfUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file || !course) return;
+  const openPrintableSyllabus = (courseData) => {
+    const c = courseData || course;
+    if (!c) return;
 
-    if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
-      showToast('Please upload a valid PDF document (.pdf)', 'error');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const dataUrl = event.target?.result;
-      await storePdfInDb(course.slug, dataUrl, file.name);
-      if (course._id) {
-        await storePdfInDb(course._id, dataUrl, file.name);
-      }
-      const updated = {
-        ...course,
-        syllabusPdf: dataUrl,
-        pdfFileName: file.name
-      };
-      setCourse(updated);
-      await saveCourseLive(updated);
-      showToast(`🎉 PDF "${file.name}" attached successfully! Now click "Download Course Handout" to download.`, 'success');
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const downloadHandout = async () => {
-    if (!course) return;
-
-    let pdfData = course.syllabusPdf || course.curriculumPdf || '';
-
-    // If PDF not directly attached or stored as reference, look up in high-capacity IndexedDB store
-    if (!pdfData || pdfData === 'indexeddb_ref' || (!pdfData.startsWith('data:') && !pdfData.startsWith('http'))) {
-      const storedPdf = (await getPdfFromDb(course.slug)) || (await getPdfFromDb(course._id));
-      if (storedPdf && storedPdf.pdfData) {
-        pdfData = storedPdf.pdfData;
-      }
-    }
-
-    if (pdfData && pdfData.trim() && pdfData !== 'indexeddb_ref') {
-      try {
-        if (pdfData.startsWith('data:')) {
-          // Robust Base64 Data URL to Blob converter (supports desktop & mobile browsers)
-          const parts = pdfData.split(',');
-          const mime = parts[0].match(/:(.*?);/)?.[1] || 'application/pdf';
-          const byteCharacters = atob(parts[1]);
-          const byteArrays = [];
-
-          for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-            const slice = byteCharacters.slice(offset, offset + 512);
-            const byteNumbers = new Array(slice.length);
-            for (let i = 0; i < slice.length; i++) {
-              byteNumbers[i] = slice.charCodeAt(i);
-            }
-            byteArrays.push(new Uint8Array(byteNumbers));
-          }
-
-          const blob = new Blob(byteArrays, { type: 'application/pdf' });
-          const blobUrl = URL.createObjectURL(blob);
-          const fileName = `${(course.title || 'Course_Divine').replace(/[^a-zA-Z0-9]/g, '_')}_Official_Syllabus.pdf`;
-
-          // Trigger clean direct download on both mobile and desktop
-          const link = document.createElement('a');
-          link.href = blobUrl;
-          link.download = fileName;
-          link.setAttribute('download', fileName);
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-
-          // For desktop browsers only, open in new tab (mobile blocks blob popups to about:blank)
-          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '');
-          if (!isMobile) {
-            window.open(blobUrl, '_blank');
-          }
-
-          setTimeout(() => URL.revokeObjectURL(blobUrl), 120000);
-          showToast(isMobile ? '📥 Syllabus PDF downloaded to your phone! Tap to open.' : 'Opening & downloading official syllabus PDF...', 'success');
-          return;
-        } else {
-          // Standard URL
-          const link = document.createElement('a');
-          link.href = pdfData;
-          link.target = '_blank';
-          link.rel = 'noopener noreferrer';
-          link.download = `${(course.title || 'Course_Divine').replace(/[^a-zA-Z0-9]/g, '_')}_Official_Syllabus.pdf`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          showToast('Opening official syllabus PDF...', 'success');
-          return;
-        }
-      } catch (err) {
-        console.error('PDF download error:', err);
-      }
-    }
-
-    // Fallback instant verified syllabus document
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
         <head>
-          <title>${course.title || 'Course Divine'} - Official Syllabus</title>
+          <title>${c.title || 'Course Divine'} - Official Syllabus Handout</title>
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 24px; color: #0f172a; max-width: 800px; margin: 0 auto; line-height: 1.6; }
-            .header { border-bottom: 2px solid #0284c7; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; }
-            h1 { font-size: 22px; color: #071F3F; margin: 0 0 6px 0; }
-            .badge { display: inline-block; padding: 4px 10px; background: #e0f2fe; color: #0369a1; border-radius: 20px; font-size: 11px; font-weight: bold; }
-            .section { margin-bottom: 20px; }
-            .section-title { font-size: 15px; font-weight: bold; color: #071F3F; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 10px; }
-            .module { background: #f8fafc; padding: 14px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #0284c7; }
-            .module-title { font-weight: bold; font-size: 13px; margin-bottom: 4px; }
-            .footer { margin-top: 30px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b; text-align: center; }
-            .btn-print { padding: 8px 16px; background: #0284c7; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; }
-            @media print { .no-print { display: none; } }
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 30px; color: #0f172a; max-width: 850px; margin: 0 auto; line-height: 1.6; }
+            .header { border-bottom: 3px solid #0284c7; padding-bottom: 20px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-start; }
+            h1 { font-size: 24px; color: #071F3F; margin: 6px 0; font-weight: 800; }
+            .badge { display: inline-block; padding: 4px 12px; background: #e0f2fe; color: #0369a1; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+            .section { margin-bottom: 24px; }
+            .section-title { font-size: 15px; font-weight: 800; color: #071F3F; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+            .module { background: #f8fafc; padding: 16px; border-radius: 10px; margin-bottom: 12px; border-left: 4px solid #0284c7; border-top: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; }
+            .module-title { font-weight: 700; font-size: 14px; color: #0f172a; margin-bottom: 6px; }
+            .desc-box { background: #f1f5f9; padding: 16px; border-radius: 10px; font-size: 13px; color: #334155; white-space: pre-line; }
+            .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b; text-align: center; }
+            .btn-print { padding: 10px 20px; background: #0284c7; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 800; font-size: 13px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+            @media print { .no-print { display: none; } body { padding: 0; } }
           </style>
         </head>
         <body>
           <div class="header">
             <div>
-              <span class="badge">${course.category || 'Professional Certification'}</span>
-              <h1 style="margin-top: 6px;">${course.title}</h1>
-              <p style="margin: 0; font-size: 12px; color: #64748b;">Duration: ${course.duration || '80 Hours'} • Lectures: ${course.totalLectures || 45} Practical Lectures</p>
+              <span class="badge">${c.category || 'Professional Certification'}</span>
+              <h1>${c.title}</h1>
+              <p style="margin: 0; font-size: 13px; color: #64748b;">Duration: ${c.duration || '80 Hours'} • Lectures: ${c.totalLectures || 45} Practical Lectures • Level: ${c.level || 'All Levels'}</p>
             </div>
-            <button class="no-print btn-print" onclick="window.print()">Print / Save PDF</button>
+            <button class="no-print btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
           </div>
+
           <div class="section">
-            <div class="section-title">Course Overview & Curriculum Details</div>
-            <p style="font-size: 13px; color: #334155;">${course.overview || course.description || 'Comprehensive industry curriculum covering hands-on labs, live mentoring, and capstone project.'}</p>
+            <div class="section-title">Course Description & Overview</div>
+            <div class="desc-box">${c.description || c.overview || 'Comprehensive masterclass and industry certification program.'}</div>
           </div>
+
+          ${(c.highlights && c.highlights.length > 0) ? `
+            <div class="section">
+              <div class="section-title">Key Program Highlights</div>
+              <ul style="padding-left: 20px; font-size: 13px; color: #334155;">
+                ${c.highlights.map(h => `<li style="margin-bottom: 6px;">${h}</li>`).join('')}
+              </ul>
+            </div>
+          ` : ''}
+
           <div class="section">
-            <div class="section-title">Curriculum Modules & Topics</div>
-            ${(course.curriculum && course.curriculum.length > 0)
-              ? course.curriculum.map((m, idx) => `
+            <div class="section-title">Curriculum Modules & Detailed Syllabus</div>
+            ${(c.curriculum && c.curriculum.length > 0)
+              ? c.curriculum.map((m, idx) => `
                 <div class="module">
                   <div class="module-title">Module ${idx + 1}: ${m.title || 'Core Foundation'}</div>
-                  <div style="font-size: 12px; color: #475569;">${m.description || 'Core theory, practical labs, and assignments.'}</div>
+                  <div style="font-size: 12px; color: #475569;">${m.description || 'Core theory, practical labs, and real-world assignments.'}</div>
                 </div>
               `).join('')
               : `
                 <div class="module">
-                  <div class="module-title">Module 1: Comprehensive Foundations & Modern Development Standards</div>
+                  <div class="module-title">Module 1: Foundations & Fundamentals</div>
                   <div style="font-size: 12px; color: #475569;">Core concepts, architecture setup, tools, and best-practice workflows.</div>
                 </div>
                 <div class="module">
-                  <div class="module-title">Module 2: Real-World Industry Projects & Advanced Practical Labs</div>
-                  <div style="font-size: 12px; color: #475569;">Full-stack development, integration, optimization, debugging, and live assignments.</div>
+                  <div class="module-title">Module 2: Advanced Practical Labs & Real-World Projects</div>
+                  <div style="font-size: 12px; color: #475569;">Practical projects, API integration, debugging, and hands-on exercises.</div>
                 </div>
                 <div class="module">
-                  <div class="module-title">Module 3: Capstone Deployment, Certification & Placement Preparation</div>
-                  <div style="font-size: 12px; color: #475569;">Production deployment, technical portfolio review, mock interviews, and ISO/APSCHE certificate.</div>
+                  <div class="module-title">Module 3: Capstone Deployment & Career Certification</div>
+                  <div style="font-size: 12px; color: #475569;">Portfolio showcase, cloud deployment, mock interviews, and ISO/APSCHE certificate.</div>
                 </div>
               `
             }
           </div>
+
           <div class="footer">
-            <p>Course Divine Technology Institute • Official Program Syllabus • Verified Handout</p>
+            <p>Course Divine Technology Institute • Official Course Syllabus Handout • Verified Document</p>
           </div>
         </body>
         </html>
       `);
       printWindow.document.close();
-      showToast('Opening verified course syllabus...', 'success');
-      return;
+      showToast('Opening printable syllabus document...', 'success');
     }
+  };
 
-    showToast('⚠️ No PDF file has been attached yet for this course.', 'info');
+  const downloadHandout = () => {
+    if (!isUnlocked) {
+      setShowUnlockModal(true);
+    } else {
+      setShowSyllabusModal(true);
+    }
   };
 
   const handleUnlockSubmit = async (e) => {
@@ -308,19 +231,22 @@ const CourseDetails = () => {
       name: unlockForm.name.trim() || 'Student',
       email: unlockForm.email.trim().toLowerCase(),
       phone: `${unlockForm.countryCode} ${unlockForm.phone.trim()}`,
-      course: course?.title || 'Course Details',
-      action: 'Course Handout & Syllabus Unlock',
-      submittedAt: new Date().toISOString()
+      courseInterest: course?.title || 'General Course',
+      subject: `Handout Request: ${course?.title || 'Course'}`,
+      message: `Student requested official course syllabus handout for ${course?.title}. Mail notification sent to coursedivine@gmail.com.`
     };
 
     try {
-      // 1. Dispatch lead to coursedivine@gmail.com
+      // 1. Submit lead to database enquiry API
+      api.post('/enquiries', payload).catch(() => null);
+
+      // 2. Dispatch email notification directly to coursedivine@gmail.com
       const formData = new FormData();
       formData.append('Student Name', payload.name);
       formData.append('Email', payload.email);
       formData.append('Phone Number', payload.phone);
-      formData.append('Course Handout Requested', payload.course);
-      formData.append('_subject', `Course Handout Request: ${payload.name} (${payload.course})`);
+      formData.append('Course Handout Requested', payload.courseInterest);
+      formData.append('_subject', `Course Handout Request: ${payload.name} (${payload.courseInterest})`);
       formData.append('_captcha', 'false');
 
       fetch('https://formsubmit.co/ajax/coursedivine@gmail.com', {
@@ -328,11 +254,10 @@ const CourseDetails = () => {
         body: formData
       }).catch(() => null);
 
-      // 2. Persist locally
+      // 3. Persist locally & unlock
       localStorage.setItem('cd_handout_unlocked', 'true');
       setIsUnlocked(true);
       setShowUnlockModal(false);
-
 
       confetti({
         particleCount: 140,
@@ -340,12 +265,12 @@ const CourseDetails = () => {
         origin: { y: 0.6 }
       });
 
-      showToast(`🎉 Syllabus & Handout Unlocked! Details sent to coursedivine@gmail.com`, 'success');
-      downloadHandout();
+      showToast(`🎉 Handout unlocked! Notification sent to coursedivine@gmail.com`, 'success');
+      setShowSyllabusModal(true);
     } catch (err) {
       setIsUnlocked(true);
       setShowUnlockModal(false);
-      showToast('Unlocked successfully!', 'success');
+      setShowSyllabusModal(true);
     } finally {
       setIsSubmittingUnlock(false);
     }
@@ -479,24 +404,11 @@ const CourseDetails = () => {
                   </p>
                 </div>
 
-                {/* Handout Download & Admin Direct Attachment Actions */}
+                {/* Handout Download Action */}
                 <div className="flex flex-wrap items-center gap-2.5">
-                  {isAdmin && (
-                    <label className="cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 border border-amber-300 text-xs font-bold transition shadow-xs">
-                      <Upload className="w-4 h-4 text-amber-700" />
-                      <span>{course.syllabusPdf ? 'Replace Attached PDF (Admin)' : 'Attach PDF File (Admin)'}</span>
-                      <input
-                        type="file"
-                        accept=".pdf,application/pdf"
-                        onChange={handleAdminDirectPdfUpload}
-                        className="hidden"
-                      />
-                    </label>
-                  )}
-
                   <button
                     onClick={downloadHandout}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-700 hover:to-blue-700 text-white text-xs font-black transition shadow-md shadow-blue-500/20 shrink-0"
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-700 hover:to-blue-700 text-white text-xs font-black transition shadow-md shadow-blue-500/20 shrink-0 cursor-pointer"
                   >
                     <Download className="w-4 h-4" />
                     <span>Download Course Handout</span>
@@ -802,9 +714,7 @@ const CourseDetails = () => {
       {/* Unlock Complete Handout & Syllabus Modal */}
       {showUnlockModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
-
           <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden text-slate-800 animate-in zoom-in-95 duration-200">
-            
             {/* Header */}
             <div className="bg-[#071F3F] text-white p-5 relative flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -818,14 +728,14 @@ const CourseDetails = () => {
                     <Lock className="w-3 h-3 text-amber-400" /> Syllabus & Handout Access
                   </span>
                   <h3 className="text-sm sm:text-base font-black text-white line-clamp-1">
-                    Unlock Full Curriculum & Handout
+                    Unlock Course Syllabus Handout
                   </h3>
                 </div>
               </div>
 
               <button
                 onClick={() => setShowUnlockModal(false)}
-                className="p-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition"
+                className="p-1.5 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -841,7 +751,7 @@ const CourseDetails = () => {
                   Download Official Course Handout
                 </h4>
                 <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                  Provide your basic contact details to unlock all module contents and receive the course syllabus.
+                  Fill in your details to view & download the complete course syllabus handout. Your enquiry will be sent directly to admissions at <strong className="text-slate-700">coursedivine@gmail.com</strong>.
                 </p>
               </div>
 
@@ -857,7 +767,7 @@ const CourseDetails = () => {
                       required
                       value={unlockForm.name}
                       onChange={(e) => setUnlockForm({ ...unlockForm, name: e.target.value })}
-                      placeholder="e.g. John Doe"
+                      placeholder="e.g. Rahul Sharma"
                       className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
                     />
                   </div>
@@ -874,7 +784,7 @@ const CourseDetails = () => {
                       required
                       value={unlockForm.email}
                       onChange={(e) => setUnlockForm({ ...unlockForm, email: e.target.value })}
-                      placeholder="john@example.com"
+                      placeholder="student@example.com"
                       className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
                     />
                   </div>
@@ -890,13 +800,12 @@ const CourseDetails = () => {
                       onChange={(e) => setUnlockForm({ ...unlockForm, countryCode: e.target.value })}
                       className="px-2.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-xs font-bold text-slate-700 focus:ring-2 focus:ring-brand-500 focus:outline-none shrink-0"
                     >
-                      <option value="+1">US (+1)</option>
                       <option value="+91">IN (+91)</option>
+                      <option value="+1">US (+1)</option>
                       <option value="+44">UK (+44)</option>
                       <option value="+971">UAE (+971)</option>
                       <option value="+61">AU (+61)</option>
                       <option value="+65">SG (+65)</option>
-                      <option value="+1">CA (+1)</option>
                       <option value="+49">DE (+49)</option>
                     </select>
 
@@ -919,7 +828,7 @@ const CourseDetails = () => {
                 <button
                   type="submit"
                   disabled={isSubmittingUnlock}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-700 hover:to-blue-700 text-white font-extrabold text-xs shadow-lg shadow-blue-500/20 transition flex items-center justify-center gap-2"
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-700 hover:to-blue-700 text-white font-extrabold text-xs shadow-lg shadow-blue-500/20 transition flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {isSubmittingUnlock ? (
                     <>
@@ -927,16 +836,159 @@ const CourseDetails = () => {
                     </>
                   ) : (
                     <>
-                      <Unlock className="w-4 h-4" /> Unlock Curriculum & Download Handout 🔓
+                      <Unlock className="w-4 h-4" /> Submit & View Syllabus Handout 🔓
                     </>
                   )}
                 </button>
               </div>
 
               <p className="text-[10px] text-center text-slate-400">
-                🔒 Official Course Divine Brochure will be automatically downloaded and emailed.
+                🔒 Enquiry details automatically notified to coursedivine@gmail.com
               </p>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Official Interactive Syllabus & Handout Modal */}
+      {showSyllabusModal && course && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] shadow-2xl border border-slate-200 overflow-hidden text-slate-800 animate-in zoom-in-95 duration-200 flex flex-col my-auto">
+            
+            {/* Header bar */}
+            <div className="bg-gradient-to-r from-[#071F3F] via-slate-900 to-brand-900 text-white p-5 sm:p-6 relative flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 p-1.5 flex items-center justify-center border border-white/20">
+                  <img src={logoImg} alt="Course Divine" className="h-full w-auto object-contain" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-brand-300 flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Official Syllabus Handout
+                  </span>
+                  <h3 className="text-base sm:text-lg font-black text-white line-clamp-1">
+                    {course.title}
+                  </h3>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => openPrintableSyllabus(course)}
+                  className="px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-brand-500/20 cursor-pointer"
+                  title="Print or Save as PDF"
+                >
+                  <Download className="w-4 h-4" />
+                  <span className="hidden sm:inline">Print / Save PDF</span>
+                </button>
+                <button
+                  onClick={() => setShowSyllabusModal(false)}
+                  className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body - Scrollable content */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-slate-700 leading-relaxed text-sm">
+              
+              {/* Quick stats badges */}
+              <div className="flex flex-wrap items-center gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
+                <span className="px-3 py-1 rounded-xl bg-brand-50 text-brand-700 font-bold text-xs border border-brand-200">
+                  {course.category || 'Professional Program'}
+                </span>
+                <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-700 font-semibold text-xs flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-slate-500" /> {course.duration || '80 Hours'}
+                </span>
+                <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-700 font-semibold text-xs flex items-center gap-1">
+                  <BookOpen className="w-3.5 h-3.5 text-slate-500" /> {course.totalLectures || 45} Practical Lectures
+                </span>
+                <span className="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 font-bold text-xs border border-emerald-200 flex items-center gap-1">
+                  <Award className="w-3.5 h-3.5" /> ISO & APSCHE Recognized
+                </span>
+              </div>
+
+              {/* Course Overview & Description text set by Admin */}
+              <div className="space-y-2">
+                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-2">
+                  <FileText className="w-4 h-4 text-brand-600" /> Course Overview & Description
+                </h4>
+                <div className="text-slate-700 whitespace-pre-line text-sm bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+                  {course.description || course.overview || 'Comprehensive masterclass and industry certification program.'}
+                </div>
+              </div>
+
+              {/* Highlights */}
+              {course.highlights && course.highlights.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Program Highlights
+                  </h4>
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-medium text-slate-700">
+                    {course.highlights.map((h, i) => (
+                      <li key={i} className="flex items-start gap-2 bg-emerald-50/40 p-2.5 rounded-xl border border-emerald-100">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        <span>{h}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Detailed Curriculum Modules */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-2">
+                  <BookOpen className="w-4 h-4 text-brand-600" /> Curriculum & Syllabus Modules
+                </h4>
+                {course.curriculum && course.curriculum.length > 0 ? (
+                  course.curriculum.map((m, idx) => (
+                    <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                      <div className="flex items-center justify-between font-bold text-slate-900 text-sm">
+                        <span>Module {idx + 1}: {m.title}</span>
+                        <span className="text-xs text-brand-600 bg-brand-50 px-2 py-0.5 rounded-md font-mono">{m.duration || '2 Hours'}</span>
+                      </div>
+                      {m.description && <p className="text-xs text-slate-600">{m.description}</p>}
+                      {m.topics && m.topics.length > 0 && (
+                        <div className="pt-2 border-t border-slate-200/60 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                          {m.topics.map((t, tidx) => (
+                            <div key={tidx} className="text-[11px] text-slate-600 flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
+                              <span>{t.title || t}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                    <p className="text-xs text-slate-600">Full step-by-step module roadmap, practical hands-on labs, capstone projects, and certification details included in this official course handout.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+              <span className="text-[11px] text-slate-500">
+                Official Handout • Course Divine Technology Institute
+              </span>
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <button
+                  onClick={() => openPrintableSyllabus(course)}
+                  className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs transition shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Download className="w-4 h-4" /> Print / Save as PDF
+                </button>
+                <button
+                  onClick={() => setShowSyllabusModal(false)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs transition cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       )}
