@@ -402,7 +402,7 @@ const CourseDetails = () => {
                 </div>
               </div>
 
-              {course.curriculum && course.curriculum.length > 0 ? (
+              {course.curriculum && course.curriculum.length > 0 && (
                 <div className="space-y-3">
                   {course.curriculum.map((module, idx) => {
                     const isOpen = openModuleIndex === idx;
@@ -464,25 +464,6 @@ const CourseDetails = () => {
                       </div>
                     );
                   })}
-                </div>
-              ) : (
-                <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/80 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-11 h-11 rounded-2xl bg-brand-50 text-brand-600 border border-brand-100 flex items-center justify-center shrink-0 shadow-xs">
-                      <FileText className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900">Official Course Syllabus & Curriculum Document</h4>
-                      <p className="text-xs text-slate-500 mt-0.5">Click the handout button to view and download the complete curriculum syllabus.</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={downloadHandout}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md shadow-brand-600/20 transition shrink-0"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Download Handout</span>
-                  </button>
                 </div>
               )}
             </div>
