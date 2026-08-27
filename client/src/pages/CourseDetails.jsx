@@ -160,8 +160,8 @@ const CourseDetails = () => {
           </div>
 
           <div class="section">
-            <div class="section-title">Course Description & Overview</div>
-            <div class="desc-box">${c.description || c.overview || 'Comprehensive masterclass and industry certification program.'}</div>
+            <div class="section-title">Official Course Syllabus & Description</div>
+            <div class="desc-box">${c.description || c.overview || 'Official Course Syllabus Content'}</div>
           </div>
 
           ${(c.highlights && c.highlights.length > 0) ? `
@@ -173,31 +173,17 @@ const CourseDetails = () => {
             </div>
           ` : ''}
 
-          <div class="section">
-            <div class="section-title">Curriculum Modules & Detailed Syllabus</div>
-            ${(c.curriculum && c.curriculum.length > 0)
-              ? c.curriculum.map((m, idx) => `
+          ${(c.curriculum && c.curriculum.length > 0) ? `
+            <div class="section">
+              <div class="section-title">Curriculum Modules & Topics</div>
+              ${c.curriculum.map((m, idx) => `
                 <div class="module">
-                  <div class="module-title">Module ${idx + 1}: ${m.title || 'Core Foundation'}</div>
-                  <div style="font-size: 12px; color: #475569;">${m.description || 'Core theory, practical labs, and real-world assignments.'}</div>
+                  <div class="module-title">Module ${idx + 1}: ${m.title || 'Core Module'}</div>
+                  <div style="font-size: 12px; color: #475569;">${m.description || ''}</div>
                 </div>
-              `).join('')
-              : `
-                <div class="module">
-                  <div class="module-title">Module 1: Foundations & Fundamentals</div>
-                  <div style="font-size: 12px; color: #475569;">Core concepts, architecture setup, tools, and best-practice workflows.</div>
-                </div>
-                <div class="module">
-                  <div class="module-title">Module 2: Advanced Practical Labs & Real-World Projects</div>
-                  <div style="font-size: 12px; color: #475569;">Practical projects, API integration, debugging, and hands-on exercises.</div>
-                </div>
-                <div class="module">
-                  <div class="module-title">Module 3: Capstone Deployment & Career Certification</div>
-                  <div style="font-size: 12px; color: #475569;">Portfolio showcase, cloud deployment, mock interviews, and ISO/APSCHE certificate.</div>
-                </div>
-              `
-            }
-          </div>
+              `).join('')}
+            </div>
+          ` : ''}
 
           <div class="footer">
             <p>Course Divine Technology Institute • Official Course Syllabus Handout • Verified Document</p>
@@ -935,13 +921,13 @@ const CourseDetails = () => {
                 </div>
               )}
 
-              {/* Detailed Curriculum Modules */}
-              <div className="space-y-3">
-                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-2">
-                  <BookOpen className="w-4 h-4 text-brand-600" /> Curriculum & Syllabus Modules
-                </h4>
-                {course.curriculum && course.curriculum.length > 0 ? (
-                  course.curriculum.map((m, idx) => (
+              {/* Detailed Curriculum Modules (If added by Admin) */}
+              {course.curriculum && course.curriculum.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-2">
+                    <BookOpen className="w-4 h-4 text-brand-600" /> Curriculum & Syllabus Modules
+                  </h4>
+                  {course.curriculum.map((m, idx) => (
                     <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
                       <div className="flex items-center justify-between font-bold text-slate-900 text-sm">
                         <span>Module {idx + 1}: {m.title}</span>
@@ -959,13 +945,9 @@ const CourseDetails = () => {
                         </div>
                       )}
                     </div>
-                  ))
-                ) : (
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                    <p className="text-xs text-slate-600">Full step-by-step module roadmap, practical hands-on labs, capstone projects, and certification details included in this official course handout.</p>
-                  </div>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Modal Footer */}
