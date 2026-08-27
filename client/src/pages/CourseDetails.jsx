@@ -128,65 +128,211 @@ const CourseDetails = () => {
 
     const printWindow = window.open('', '_blank');
     if (printWindow) {
+      const logoSrc = window.location.origin + '/logo.png';
+
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
         <head>
-          <title>${c.title || 'Course Divine'} - Official Syllabus Handout</title>
+          <title>${c.title || 'Course Divine'} - Course Handout</title>
+          <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 30px; color: #0f172a; max-width: 850px; margin: 0 auto; line-height: 1.6; }
-            .header { border-bottom: 3px solid #0284c7; padding-bottom: 20px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-start; }
-            h1 { font-size: 24px; color: #071F3F; margin: 6px 0; font-weight: 800; }
-            .badge { display: inline-block; padding: 4px 12px; background: #e0f2fe; color: #0369a1; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
-            .section { margin-bottom: 24px; }
-            .section-title { font-size: 15px; font-weight: 800; color: #071F3F; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-            .module { background: #f8fafc; padding: 16px; border-radius: 10px; margin-bottom: 12px; border-left: 4px solid #0284c7; border-top: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; }
-            .module-title { font-weight: 700; font-size: 14px; color: #0f172a; margin-bottom: 6px; }
-            .desc-box { background: #f1f5f9; padding: 16px; border-radius: 10px; font-size: 13px; color: #334155; white-space: pre-line; }
-            .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b; text-align: center; }
-            .btn-print { padding: 10px 20px; background: #0284c7; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 800; font-size: 13px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-            @media print { .no-print { display: none; } body { padding: 0; } }
+            @page {
+              size: A4 portrait;
+              margin: 10mm 12mm 12mm 12mm;
+            }
+            * { box-sizing: border-box; }
+            body {
+              font-family: "Times New Roman", Times, Georgia, serif;
+              color: #000;
+              background: #fff;
+              margin: 0;
+              padding: 15px;
+              line-height: 1.5;
+            }
+            .page-frame {
+              border: 2px solid #000;
+              padding: 24px;
+              min-height: 95vh;
+              box-sizing: border-box;
+              position: relative;
+            }
+            .header-table {
+              width: 100%;
+              border-collapse: collapse;
+              border-bottom: 2px solid #000;
+              padding-bottom: 12px;
+              margin-bottom: 20px;
+            }
+            .brand-title {
+              font-size: 26px;
+              font-weight: 900;
+              letter-spacing: 1px;
+              color: #000;
+              text-transform: uppercase;
+              font-family: Arial, sans-serif;
+            }
+            .brand-tagline {
+              font-size: 12px;
+              font-style: italic;
+              color: #222;
+              margin-top: 2px;
+              font-family: Arial, sans-serif;
+            }
+            .logo-img {
+              height: 60px;
+              width: auto;
+              max-width: 160px;
+              object-fit: contain;
+              background: #071F3F;
+              padding: 4px;
+              border-radius: 4px;
+            }
+            .doc-main-title {
+              text-align: center;
+              margin: 22px 0 26px 0;
+            }
+            .doc-main-title h1 {
+              font-size: 20px;
+              font-weight: 900;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              color: #000;
+              margin: 0;
+              font-family: Arial, sans-serif;
+              text-decoration: underline;
+            }
+            .course-meta-row {
+              margin-bottom: 22px;
+              font-size: 16px;
+            }
+            .meta-label {
+              font-weight: bold;
+              text-decoration: underline;
+              color: #000;
+              font-size: 16px;
+            }
+            .meta-value {
+              font-weight: bold;
+              font-size: 17px;
+              color: #000;
+              margin-left: 20px;
+            }
+            .section-block {
+              margin-top: 22px;
+            }
+            .section-heading {
+              font-size: 17px;
+              font-weight: bold;
+              color: #000;
+              margin-bottom: 10px;
+            }
+            .description-text {
+              font-size: 14px;
+              line-height: 1.75;
+              color: #111;
+              text-align: justify;
+              white-space: pre-line;
+            }
+            .list-item {
+              margin-bottom: 6px;
+              font-size: 14px;
+            }
+            .footer-note {
+              margin-top: 35px;
+              padding-top: 12px;
+              border-top: 1px solid #666;
+              font-size: 11px;
+              color: #555;
+              text-align: center;
+              font-family: Arial, sans-serif;
+            }
+            .btn-print-floating {
+              position: fixed;
+              bottom: 25px;
+              right: 25px;
+              padding: 12px 24px;
+              background: #0284c7;
+              color: #fff;
+              border: none;
+              border-radius: 30px;
+              cursor: pointer;
+              font-weight: 800;
+              font-size: 14px;
+              font-family: Arial, sans-serif;
+              box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+              z-index: 9999;
+              transition: transform 0.2s, background 0.2s;
+            }
+            .btn-print-floating:hover {
+              background: #0369a1;
+              transform: scale(1.05);
+            }
+            @media print {
+              .no-print { display: none !important; }
+              body { padding: 0; background: #fff !important; }
+              .page-frame { border: 2px solid #000 !important; min-height: 98vh; padding: 20px; }
+              .btn-print-floating { display: none !important; }
+            }
           </style>
         </head>
         <body>
-          <div class="header">
-            <div>
-              <span class="badge">${c.category || 'Professional Certification'}</span>
-              <h1>${c.title}</h1>
-              <p style="margin: 0; font-size: 13px; color: #64748b;">Duration: ${c.duration || '80 Hours'} • Lectures: ${c.totalLectures || 45} Practical Lectures • Level: ${c.level || 'All Levels'}</p>
+          <button class="btn-print-floating no-print" onclick="window.print()">🖨️ Save as PDF / Print</button>
+
+          <div class="page-frame">
+            <table class="header-table">
+              <tr>
+                <td style="vertical-align: top; text-align: left;">
+                  <div class="brand-title">COURSE DIVINE</div>
+                  <div class="brand-tagline">DIVE INTO THE LEARNING POOL</div>
+                </td>
+                <td style="vertical-align: top; text-align: right;">
+                  <img class="logo-img" src="${logoSrc}" alt="Course Divine Logo" onError="this.src='https://www.learncoursedivine.com/logo.png'" />
+                </td>
+              </tr>
+            </table>
+
+            <div class="doc-main-title">
+              <h1>COURSE HANDOUT (COURSE CURRICULUM)</h1>
             </div>
-            <button class="no-print btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
-          </div>
 
-          <div class="section">
-            <div class="section-title">Official Course Syllabus & Description</div>
-            <div class="desc-box">${c.description || c.overview || 'Official Course Syllabus Content'}</div>
-          </div>
-
-          ${(c.highlights && c.highlights.length > 0) ? `
-            <div class="section">
-              <div class="section-title">Key Program Highlights</div>
-              <ul style="padding-left: 20px; font-size: 13px; color: #334155;">
-                ${c.highlights.map(h => `<li style="margin-bottom: 6px;">${h}</li>`).join('')}
-              </ul>
+            <div class="course-meta-row">
+              <span class="meta-label">Course Title:</span>
+              <span class="meta-value">${c.title}</span>
             </div>
-          ` : ''}
 
-          ${(c.curriculum && c.curriculum.length > 0) ? `
-            <div class="section">
-              <div class="section-title">Curriculum Modules & Topics</div>
-              ${c.curriculum.map((m, idx) => `
-                <div class="module">
-                  <div class="module-title">Module ${idx + 1}: ${m.title || 'Core Module'}</div>
-                  <div style="font-size: 12px; color: #475569;">${m.description || ''}</div>
+            <div class="section-block">
+              <div class="section-heading">Course Description:</div>
+              <div class="description-text">${c.description || c.overview || 'Official Course Syllabus Content'}</div>
+            </div>
+
+            ${(c.learningOutcomes && c.learningOutcomes.length > 0) ? `
+              <div class="section-block">
+                <div class="section-heading">2. Skills You Will Gain:</div>
+                <ul style="padding-left: 25px; margin-top: 8px;">
+                  ${c.learningOutcomes.map(item => `<li class="list-item">${item}</li>`).join('')}
+                </ul>
+              </div>
+            ` : ''}
+
+            ${(c.curriculum && c.curriculum.length > 0) ? `
+              <div class="section-block">
+                <div class="section-heading">3. Curriculum Modules:</div>
+                <div style="margin-top: 10px;">
+                  ${c.curriculum.map((m, idx) => `
+                    <div style="margin-bottom: 12px; font-size: 14px;">
+                      <strong>Module ${idx + 1}: ${m.title}</strong>
+                      ${m.description ? `<p style="margin: 3px 0 0 0; font-size: 13px; color: #333;">${m.description}</p>` : ''}
+                    </div>
+                  `).join('')}
                 </div>
-              `).join('')}
-            </div>
-          ` : ''}
+              </div>
+            ` : ''}
 
-          <div class="footer">
-            <p>Course Divine Technology Institute • Official Course Syllabus Handout • Verified Document</p>
+            <div class="footer-note">
+              Course Divine Technology Institute • Official Course Handout & Curriculum • Verified Document
+            </div>
           </div>
         </body>
         </html>
@@ -856,79 +1002,78 @@ const CourseDetails = () => {
               </div>
             </div>
 
-            {/* Modal Body - Scrollable content */}
-            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-slate-700 leading-relaxed text-sm">
+            {/* Modal Body - Scrollable Handout Document Preview */}
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1 text-slate-900 leading-relaxed text-sm bg-slate-100">
               
-              {/* Quick stats badges */}
-              <div className="flex flex-wrap items-center gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
-                <span className="px-3 py-1 rounded-xl bg-brand-50 text-brand-700 font-bold text-xs border border-brand-200">
-                  {course.category || 'Professional Program'}
-                </span>
-                <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-700 font-semibold text-xs flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-slate-500" /> {course.duration || '80 Hours'}
-                </span>
-                <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-700 font-semibold text-xs flex items-center gap-1">
-                  <BookOpen className="w-3.5 h-3.5 text-slate-500" /> {course.totalLectures || 45} Practical Lectures
-                </span>
-                <span className="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 font-bold text-xs border border-emerald-200 flex items-center gap-1">
-                  <Award className="w-3.5 h-3.5" /> ISO & APSCHE Recognized
-                </span>
-              </div>
-
-              {/* Course Overview & Description text set by Admin */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-2">
-                  <FileText className="w-4 h-4 text-brand-600" /> Course Overview & Description
-                </h4>
-                <div className="text-slate-700 whitespace-pre-line text-sm bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
-                  {course.description || course.overview || 'Comprehensive masterclass and industry certification program.'}
+              {/* Printable Document Frame matching PDF template */}
+              <div className="bg-white border-2 border-slate-900 rounded-2xl p-6 sm:p-8 shadow-md space-y-6">
+                {/* Header Row */}
+                <div className="flex items-start justify-between pb-4 border-b-2 border-slate-900">
+                  <div>
+                    <h2 className="text-2xl sm:text-3xl font-black tracking-wider text-slate-900 uppercase font-sans">COURSE DIVINE</h2>
+                    <p className="text-xs italic text-slate-700 font-sans mt-0.5">DIVE INTO THE LEARNING POOL</p>
+                  </div>
+                  <img
+                    src="/logo.png"
+                    alt="Course Divine Logo"
+                    className="h-14 sm:h-16 w-auto object-contain bg-[#071F3F] p-1.5 rounded-lg shadow-sm"
+                    onError={(e) => { e.target.src = 'https://www.learncoursedivine.com/logo.png'; }}
+                  />
                 </div>
-              </div>
 
-              {/* Highlights */}
-              {course.highlights && course.highlights.length > 0 && (
+                {/* Main Centered Title */}
+                <div className="text-center py-2">
+                  <h3 className="text-base sm:text-lg font-black uppercase tracking-wider text-slate-900 underline font-sans">
+                    COURSE HANDOUT (COURSE CURRICULUM)
+                  </h3>
+                </div>
+
+                {/* Course Title */}
+                <div className="text-sm sm:text-base">
+                  <span className="font-bold underline text-slate-900 font-sans">Course Title:</span>
+                  <span className="font-bold text-slate-900 font-sans ml-4">{course.title}</span>
+                </div>
+
+                {/* Course Description */}
                 <div className="space-y-2">
-                  <h4 className="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Program Highlights
-                  </h4>
-                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-medium text-slate-700">
-                    {course.highlights.map((h, i) => (
-                      <li key={i} className="flex items-start gap-2 bg-emerald-50/40 p-2.5 rounded-xl border border-emerald-100">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                        <span>{h}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <h4 className="font-bold text-slate-900 text-sm sm:text-base font-sans">Course Description:</h4>
+                  <div className="text-slate-900 text-xs sm:text-sm leading-relaxed whitespace-pre-line text-justify bg-slate-50/70 p-4 rounded-xl border border-slate-200">
+                    {course.description || course.overview || 'Official Course Syllabus Content'}
+                  </div>
                 </div>
-              )}
 
-              {/* Detailed Curriculum Modules (If added by Admin) */}
-              {course.curriculum && course.curriculum.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-2">
-                    <BookOpen className="w-4 h-4 text-brand-600" /> Curriculum & Syllabus Modules
-                  </h4>
-                  {course.curriculum.map((m, idx) => (
-                    <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                      <div className="flex items-center justify-between font-bold text-slate-900 text-sm">
-                        <span>Module {idx + 1}: {m.title}</span>
-                        <span className="text-xs text-brand-600 bg-brand-50 px-2 py-0.5 rounded-md font-mono">{m.duration || '2 Hours'}</span>
-                      </div>
-                      {m.description && <p className="text-xs text-slate-600">{m.description}</p>}
-                      {m.topics && m.topics.length > 0 && (
-                        <div className="pt-2 border-t border-slate-200/60 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                          {m.topics.map((t, tidx) => (
-                            <div key={tidx} className="text-[11px] text-slate-600 flex items-center gap-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
-                              <span>{t.title || t}</span>
-                            </div>
-                          ))}
+                {/* Skills / Outcomes */}
+                {course.learningOutcomes && course.learningOutcomes.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-bold text-slate-900 text-sm sm:text-base font-sans">2. Skills You Will Gain:</h4>
+                    <ul className="list-disc pl-6 space-y-1 text-xs sm:text-sm text-slate-900">
+                      {course.learningOutcomes.map((item, idx) => (
+                        <li key={idx}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Curriculum Modules */}
+                {course.curriculum && course.curriculum.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="font-bold text-slate-900 text-sm sm:text-base font-sans">3. Curriculum Modules:</h4>
+                    <div className="space-y-2">
+                      {course.curriculum.map((m, idx) => (
+                        <div key={idx} className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs sm:text-sm">
+                          <strong className="text-slate-900 font-sans">Module {idx + 1}: {m.title}</strong>
+                          {m.description && <p className="text-slate-700 text-xs mt-1">{m.description}</p>}
                         </div>
-                      )}
+                      ))}
                     </div>
-                  ))}
+                  </div>
+                )}
+
+                {/* Footer note */}
+                <div className="pt-4 border-t border-slate-400 text-center text-[11px] text-slate-500 font-sans">
+                  Course Divine Technology Institute • Official Course Handout & Curriculum • Verified Document
                 </div>
-              )}
+              </div>
             </div>
 
             {/* Modal Footer */}
