@@ -47,7 +47,8 @@ import {
   Activity,
   Box,
   Sliders,
-  Workflow
+  Workflow,
+  PhoneCall
 } from 'lucide-react';
 import api, { fallbackStore, getLiveCourses, fetchLiveCoursesFromApi } from '../services/api';
 import { useNotification } from '../context/NotificationContext';
@@ -65,7 +66,8 @@ import {
   project9DigitalMarketing,
   project10PythonSales,
   project11SolidworksGearbox,
-  project12Ecosystem3D
+  project12Ecosystem3D,
+  project13ScadaAutomation
 } from '../assets/gallery';
 
 const AnimatedCounter = ({ target, duration = 6500, suffix = '', decimals = 0 }) => {
@@ -471,6 +473,34 @@ const Home = () => {
       courseName: 'Python Programming & Data Analytics',
       metrics: '$2.45M Sales Analyzed, 3D Plot, 22h Build',
       previewBadge: 'Python 3.12 + Streamlit + 3D'
+    },
+    {
+      id: 'p6',
+      title: 'Industrial PLC & SCADA Water Treatment Automation Dashboard',
+      shortTitle: 'PLC & SCADA Water Treatment Automation',
+      domain: 'Automation & Robotics',
+      category: 'SCADA Project',
+      image: project13ScadaAutomation,
+      description: 'Real-time industrial SCADA monitoring dashboard for automated water filtration, chemical dosing, flow telemetry, and remote pump control.',
+      detailedDescription: 'Build a complete industrial SCADA monitoring & telemetry system using Siemens WinCC, TIA Portal, Modbus TCP/IP, and Node-RED. Features live raw water tank monitoring, chemical dosing control, automated backwash valves, trend graphing, and real-time alarm management.',
+      challenge: 'Integrating multi-sensor Modbus TCP telemetry into a zero-latency responsive HMI dashboard with automated alarm triggers.',
+      tools: ['Siemens S7-1200 PLC', 'WinCC SCADA', 'TIA Portal', 'Modbus TCP', 'Node-RED', 'P&ID Telemetry'],
+      workflow: [
+        { step: '01', title: 'P&ID Architecture', desc: 'Designing water treatment process instrumentation and flow pipeline schema.' },
+        { step: '02', title: 'PLC Logic Programming', desc: 'Writing Ladder Logic for automatic pump control, backwash sequence, and dosing pumps.' },
+        { step: '03', title: 'SCADA HMI Dashboard', desc: 'Developing high-resolution WinCC SCADA interactive panel with real-time gauges.' },
+        { step: '04', title: 'Modbus Telemetry', desc: 'Deploying Modbus TCP/IP protocol to stream live tank levels and active alarms.' }
+      ],
+      keyDeliverables: [
+        'Complete WinCC SCADA HMI Interface & PLC Ladder Code',
+        'Real-Time Water Filtration Flow & Pressure Telemetry',
+        'Automated Backwash & Dosing Control Logic',
+        'Interactive Alarm Panel & Historical Data Logs'
+      ],
+      courseLink: '/courses/embedded-systems-iot-robotics-certified-course',
+      courseName: 'PLC, SCADA & Industrial Automation',
+      metrics: '45.6 m³/h Flow Rate, 100% Remote, Live SCADA',
+      previewBadge: 'Siemens PLC + WinCC SCADA + IIoT'
     }
   ];
 
@@ -480,7 +510,8 @@ const Home = () => {
     { label: 'ANSYS Project', value: 'ANSYS Project' },
     { label: 'Data Dashboard', value: 'Data Dashboard' },
     { label: 'Marketing Campaign', value: 'Marketing Campaign' },
-    { label: 'Python Project', value: 'Python Project' }
+    { label: 'Python Project', value: 'Python Project' },
+    { label: 'SCADA Project', value: 'SCADA Project' }
   ];
 
   const filteredProjects = showcaseProjects.filter((p) => {
@@ -1899,13 +1930,25 @@ const Home = () => {
         </button>
       </div>
 
-      {/* FLOATING ACTION: GREEN WHATSAPP BUTTON (Bottom Left) */}
-      <div className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-40">
+      {/* FLOATING ACTION: CALL NOW & WHATSAPP BUTTONS (Bottom Left) */}
+      <div className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-40 flex flex-col items-start gap-3">
+        {/* Floating Call Now Button (Placed on top of WhatsApp button) */}
+        <a
+          href="tel:+919100348679"
+          className="px-4 py-2.5 rounded-full bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-700 hover:to-blue-700 text-white font-extrabold text-xs shadow-2xl hover:scale-105 transition-all duration-300 flex items-center gap-2 border-2 border-white/40 cursor-pointer"
+          title="Call Course Divine Admissions"
+          aria-label="Call Now"
+        >
+          <PhoneCall className="w-4 h-4 text-amber-300 animate-pulse" />
+          <span>Call Now</span>
+        </a>
+
+        {/* Floating WhatsApp Button */}
         <a
           href="https://wa.me/919100348679?text=Hello%20Course%20Divine,%20I%20am%20interested%20in%20courses%20and%20internships!"
           target="_blank"
           rel="noreferrer"
-          className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-2xl hover:scale-110 transition-transform duration-300 relative group"
+          className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-2xl hover:scale-110 transition-transform duration-300 relative group cursor-pointer"
           title="Chat with us on WhatsApp"
           aria-label="WhatsApp Chat"
         >
