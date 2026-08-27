@@ -464,7 +464,7 @@ const CourseDetails = () => {
               </h1>
 
               <p className="text-sm sm:text-base text-brand-100/80 leading-relaxed max-w-3xl">
-                {course.subtitle || course.description}
+                {course.subtitle || (course.description ? (course.description.length > 180 ? course.description.slice(0, 180) + '...' : course.description) : '')}
               </p>
 
               {/* Ratings & Meta */}
