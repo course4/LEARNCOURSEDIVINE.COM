@@ -5,6 +5,7 @@ const Enquiry = require('../models/Enquiry');
 // @access  Public
 const submitEnquiry = async (req, res, next) => {
   try {
+    const { name, email, phone, subject, courseInterest, message } = req.body;
     const enquiryMessage = message || `Student requested official course syllabus and handout for ${courseInterest || 'course'}. Notification queued for coursedivine@gmail.com.`;
 
     if (!name || !email || !phone) {
