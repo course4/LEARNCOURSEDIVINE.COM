@@ -21,10 +21,9 @@ router.use(protect, admin);
 
 router.get('/stats', getAdminStats);
 router.get('/users', getAllUsers);
+router.put('/users/:id/reset-password', resetAdminPassword);
 router.route('/users/:id')
   .put(updateUser)
   .delete(deleteUser);
-
-router.put('/users/:id/reset-password', resetAdminPassword);
 
 module.exports = router;

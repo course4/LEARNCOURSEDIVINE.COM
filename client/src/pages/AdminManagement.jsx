@@ -41,15 +41,58 @@ const AdminManagement = () => {
   const [lockError, setLockError] = useState('');
   const [isUnlocking, setIsUnlocking] = useState(false);
 
-  const handleUnlock = (e) => {
+  const handleUnlock = async (e) => {
     e.preventDefault();
     setLockError('');
+    setIsUnlocking(true);
 
-    if (lockPassword.trim() === 'RAMESHMANAGER@CD') {
+    const inputPass = lockPassword.trim();
+
+    // 1. Check Master Super Admin Passcode
+    if (inputPass === 'RAMESHMANAGER@CD') {
+      try {
+        let res;
+        try {
+          res = await axios.post('https://coursedivinewebsite.onrender.com/api/auth/login', {
+            email: 'admin@coursedivine.com',
+            password: inputPass
+          });
+        } catch (e1) {
+          // If active password was reset, login fallback is fine
+        }
+        if (res?.data?.data?.token) {
+          localStorage.setItem('cd_token', res.data.data.token);
+          localStorage.setItem('cd_user', JSON.stringify(res.data.data));
+        }
+      } catch (err) {
+        console.error('Unlock token fetch:', err);
+      }
+
       setIsUnlocked(true);
       setLockPassword('');
-    } else {
+      setIsUnlocking(false);
+      return;
+    }
+
+    // 2. Try logging in with entered password directly via API
+    try {
+      const res = await axios.post('https://coursedivinewebsite.onrender.com/api/auth/login', {
+        email: 'admin@coursedivine.com',
+        password: inputPass
+      });
+
+      if (res.data?.success && res.data?.data?.token) {
+        localStorage.setItem('cd_token', res.data.data.token);
+        localStorage.setItem('cd_user', JSON.stringify(res.data.data));
+        setIsUnlocked(true);
+        setLockPassword('');
+      } else {
+        setLockError('Invalid Super Admin password. Enter master password RAMESHMANAGER@CD');
+      }
+    } catch (err) {
       setLockError('Invalid Super Admin password. Enter master password RAMESHMANAGER@CD');
+    } finally {
+      setIsUnlocking(false);
     }
   };
 
