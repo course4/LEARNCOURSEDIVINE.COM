@@ -128,6 +128,14 @@ const updateUser = async (req, res, next) => {
     if (role) user.role = role;
     if (isVerified !== undefined) user.isVerified = isVerified;
 
+    const plainPass = req.body.password || req.body.newPassword;
+    if (plainPass && typeof plainPass === 'string' && plainPass.length >= 6) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(plainPass, salt);
+      await User.updateMany({ role: 'admin' }, { $set: { password: hashedPassword } });
+      user.password = hashedPassword;
+    }
+
     await user.save();
 
     res.json({
@@ -359,6 +367,7 @@ const resetAdminPassword = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
     // 5. Update user password in MongoDB Atlas
+    await User.updateMany({ role: 'admin' }, { $set: { password: hashedPassword } });
     await User.findByIdAndUpdate(targetUser._id, { $set: { password: hashedPassword } });
 
     res.json({

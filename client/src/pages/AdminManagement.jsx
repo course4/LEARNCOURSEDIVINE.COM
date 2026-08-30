@@ -133,22 +133,35 @@ const AdminManagement = () => {
       const token = localStorage.getItem('cd_token');
       const authHeaders = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
 
-      // 1. Try Local/Bluehost Endpoint (POST /api/auth/approve-password-reset)
+      // 1. Try Primary Endpoint (PUT /api/admin/users/:id/reset-password)
       try {
-        res = await api.post('/auth/approve-password-reset', { email: selectedAdmin.email, newPassword });
+        res = await api.put(`/admin/users/${selectedAdmin._id}/reset-password`, payload);
         if (res.data?.success || res.status === 200) {
           updatedSuccessfully = true;
         }
       } catch (err1) {
         lastErrorMessage = err1.response?.data?.message || err1.message;
-        // 2. Try Render Cloud Backup Endpoint (POST /api/auth/approve-password-reset)
+        // 2. Try Render Cloud User Update Endpoint (PUT /api/admin/users/:id)
         try {
-          res = await axios.post('https://coursedivinewebsite.onrender.com/api/auth/approve-password-reset', { email: selectedAdmin.email, newPassword });
+          res = await axios.put(
+            `https://coursedivinewebsite.onrender.com/api/admin/users/${selectedAdmin._id}`,
+            { password: newPassword, newPassword, confirmPassword },
+            authHeaders
+          );
           if (res.data?.success || res.status === 200) {
             updatedSuccessfully = true;
           }
         } catch (err2) {
           lastErrorMessage = err2.response?.data?.message || err2.message;
+          // 3. Try Secondary Auth Reset Endpoint (POST /api/auth/approve-password-reset)
+          try {
+            res = await api.post('/auth/approve-password-reset', { email: selectedAdmin.email, newPassword });
+            if (res.data?.success || res.status === 200) {
+              updatedSuccessfully = true;
+            }
+          } catch (err3) {
+            lastErrorMessage = err3.response?.data?.message || err3.message;
+          }
         }
       }
 
