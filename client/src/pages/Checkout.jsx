@@ -115,6 +115,25 @@ const Checkout = () => {
 
   const handlePaymentSuccess = async (paymentData) => {
     setShowPaymentModal(false);
+
+    // Direct FormSubmit email notification to coursedivine@gmail.com
+    if (typeof window !== 'undefined' && billing) {
+      const payload = new FormData();
+      payload.append('Customer Name', billing.name);
+      payload.append('Customer Email', billing.email);
+      payload.append('Phone Number', billing.phone);
+      payload.append('Order Total Amount', `₹${finalAmount || 0}`);
+      payload.append('Cart Items Count', String(cartCount || 1));
+      payload.append('Order ID', paymentData.razorpay_order_id || orderDetails?.orderId || 'ORD_' + Date.now());
+      payload.append('_subject', `New Course Order Placed by ${billing.name} (₹${finalAmount || 0})`);
+      payload.append('_captcha', 'false');
+
+      fetch('https://formsubmit.co/ajax/coursedivine@gmail.com', {
+        method: 'POST',
+        body: payload
+      }).catch(() => null);
+    }
+
     showToast('🎉 Payment successful! Enrolling in courses...', 'success');
     clearCart();
     navigate(`/order-success/${paymentData.razorpay_order_id || orderDetails.orderId}`);

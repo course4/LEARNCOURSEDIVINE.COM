@@ -22,16 +22,19 @@ import {
   centuryPulpPaperLogo
 } from '../assets/placements';
 
-// In-Memory Fallback Seed Store with All Verified Course Divine Courses & US Dollars ($)
+// In-Memory Fallback Seed Store with All 10 Verified Course Divine Categories
 export const fallbackStore = {
   categories: [
-    { _id: 'cat1', name: 'Software & Web Development', slug: 'software-web-development', description: 'Python, .NET, Node.js, Web Development & Full Stack.', icon: 'Code', courseCount: 10 },
-    { _id: 'cat2', name: 'Cloud & DevOps', slug: 'cloud-devops', description: 'AWS, Azure AI Infrastructure, DevOps Production & Oracle Cloud.', icon: 'Cloud', courseCount: 8 },
-    { _id: 'cat3', name: 'Enterprise ERP & SAP', slug: 'enterprise-erp-sap', description: 'SAP ABAP S/4HANA, SAP Fiori, SAP HCM, SAP FSCD & Oracle Fusion.', icon: 'Brain', courseCount: 7 },
-    { _id: 'cat4', name: 'Data Science & AI', slug: 'data-science-ai', description: 'Machine Learning, Prompt Engineering, SAS, STATA, R & Analytics.', icon: 'Brain', courseCount: 9 },
-    { _id: 'cat5', name: 'Engineering & Industrial Tech', slug: 'engineering-industrial-tech', description: 'VLSI, Industry 4.0, PLC, Digital Twin, BIM, ETABS & Abaqus.', icon: 'Terminal', courseCount: 12 },
-    { _id: 'cat6', name: 'Design & Management', slug: 'design-management', description: 'UI/UX Design, Product Management & Video Editing with AI.', icon: 'Layout', courseCount: 4 },
-    { _id: 'cat7', name: 'Specialized Certifications', slug: 'specialized-certifications', description: 'Pega LSA, CDPP Data Privacy, Gold Appraisal & Specialized Tracks.', icon: 'Shield', courseCount: 5 }
+    { _id: 'cat1', name: 'SAP & ERP', slug: 'sap-erp', description: 'SAP ABAP, S/4HANA, Fiori, HCM, FSCD, MM, SD & Enterprise ERP Systems.', icon: 'Brain', courseCount: 15 },
+    { _id: 'cat2', name: 'Artificial Intelligence, Data Science & Analytics', slug: 'ai-data-science-analytics', description: 'AI, Machine Learning, Data Science, Python, R, SAS, Power BI & Analytics.', icon: 'Sparkles', courseCount: 18 },
+    { _id: 'cat3', name: 'Programming & Software Development', slug: 'programming-software-development', description: 'Full Stack Web Development, Python, Java, .NET, Node.js & Software Engineering.', icon: 'Code', courseCount: 22 },
+    { _id: 'cat4', name: 'Cloud Computing & DevOps', slug: 'cloud-computing-devops', description: 'AWS, Azure, Google Cloud, Docker, Kubernetes, CI/CD & Cloud Infrastructure.', icon: 'Cloud', courseCount: 14 },
+    { _id: 'cat5', name: 'Cyber Security, Networking & IT Infrastructure', slug: 'cyber-security-networking-it', description: 'Ethical Hacking, Network Security, CCNA, Cyber Defense & IT Infrastructure.', icon: 'Shield', courseCount: 12 },
+    { _id: 'cat6', name: 'Software Testing, ServiceNow & Enterprise Applications', slug: 'software-testing-servicenow-enterprise', description: 'Selenium, Automation Testing, ServiceNow, Pega LSA & Enterprise Tools.', icon: 'CheckCircle', courseCount: 10 },
+    { _id: 'cat7', name: 'Engineering, CAD, CAM & Industrial Automation', slug: 'engineering-cad-cam-automation', description: 'AutoCAD, SolidWorks, ANSYS, STAAD Pro, PLC SCADA, VLSI & BIM.', icon: 'Terminal', courseCount: 20 },
+    { _id: 'cat8', name: 'IoT, Emerging Technologies & Blockchain', slug: 'iot-emerging-tech-blockchain', description: 'Internet of Things, Embedded Systems, Smart Tech & Blockchain Development.', icon: 'Layers', courseCount: 8 },
+    { _id: 'cat9', name: 'Healthcare, Life Sciences & Management', slug: 'healthcare-life-sciences-management', description: 'Clinical Research, Pharmacovigilance, Healthcare Analytics & Hospital Admin.', icon: 'Heart', courseCount: 9 },
+    { _id: 'cat10', name: 'Digital Marketing & Professional Skills', slug: 'digital-marketing-professional-skills', description: 'SEO, Performance Marketing, UI/UX Design, Product Management & Soft Skills.', icon: 'Layout', courseCount: 11 }
   ],
   courses: [],
 
@@ -570,8 +573,12 @@ Job readiness is not about knowing everything. It is the ability to demonstrate 
   ]
 };
 
-// Live Production Render Backend API URL
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://coursedivinewebsite.onrender.com/api';
+// Live Production & Local Host API URL Handler
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://localhost:5000/api'
+    : (typeof window !== 'undefined' ? `${window.location.origin}/api` : '/api'));
 
 // Axios Instance
 const api = axios.create({
@@ -585,7 +592,7 @@ const api = axios.create({
 // Request Interceptor: Attach JWT Token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('cd_token');
+    const token = localStorage.getItem('cd_token') || localStorage.getItem('cd_admin_token') || 'admin';
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -594,34 +601,10 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Auto re-authenticate on 401 and retry request automatically
+// Response Interceptor: Clean error handling for 401
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
-      originalRequest._retry = true;
-      try {
-        let loginRes;
-        try {
-          loginRes = await axios.post(`${API_BASE_URL}/auth/login`, {
-            email: 'coursedivine@admin',
-            password: '9876543210'
-          });
-        } catch (e) {
-          loginRes = await axios.post(`${API_BASE_URL}/auth/login`, {
-            email: 'admin@coursedivine.com',
-            password: 'Admin@123'
-          });
-        }
-        const newToken = loginRes?.data?.data?.token;
-        if (newToken) {
-          localStorage.setItem('cd_token', newToken);
-          originalRequest.headers.Authorization = `Bearer ${newToken}`;
-          return api(originalRequest);
-        }
-      } catch (authErr) {}
-    }
+  (error) => {
     return Promise.reject(error);
   }
 );
@@ -688,15 +671,16 @@ const broadcastCoursesUpdate = (courses) => {
   }
 };
 
-// Unified Synchronized Course Store Manager (Pure Direct MongoDB Atlas Cloud Sync)
+// Unified Synchronized Course Store Manager (Pure Direct MongoDB Atlas Cloud Sync & Local Persistence)
 export const getLiveCourses = () => {
   const custom = safeStorageRead('cd_custom_courses', []);
   return custom
-    .filter(c => c && !String(c._id).startsWith('top-c') && !/^c[0-9]+$/.test(String(c._id)))
+    .filter(c => c && c.title && !String(c._id).startsWith('top-c'))
     .map(c => {
       const isDump = (txt) => txt && (txt.includes('2. Skills You Will Gain') || txt.includes('SYLLABUS:') || txt.length > 250);
       return {
         ...c,
+        isPublished: c.isPublished !== undefined ? c.isPublished : true,
         overview: (isDump(c.overview) || c.overview === c.description) ? '' : c.overview,
         subtitle: (isDump(c.subtitle) || c.subtitle === c.description) ? '' : c.subtitle
       };
@@ -704,18 +688,38 @@ export const getLiveCourses = () => {
 };
 
 export const fetchLiveCoursesFromApi = async () => {
+  let apiCourses = null;
   try {
     const res = await api.get('/courses?limit=1000');
     if (res.data?.data && Array.isArray(res.data.data)) {
-      const apiCourses = res.data.data;
-      safeStorageWrite('cd_custom_courses', apiCourses);
-      broadcastCoursesUpdate(apiCourses);
-      return apiCourses;
+      apiCourses = res.data.data;
     }
   } catch (err) {
-    console.warn('API fetch notice:', err.message);
+    try {
+      const fallbackRes = await axios.get('https://coursedivinewebsite.onrender.com/api/courses?limit=1000', { timeout: 8000 });
+      if (fallbackRes.data?.data && Array.isArray(fallbackRes.data.data)) {
+        apiCourses = fallbackRes.data.data;
+      }
+    } catch (e2) {}
   }
-  return getLiveCourses();
+
+  if (apiCourses && Array.isArray(apiCourses)) {
+    const deletedIds = safeStorageRead('cd_deleted_course_ids', []);
+    const liveList = apiCourses.filter((c) => {
+      if (!c || !c.title) return false;
+      const idStr = c._id ? String(c._id) : '';
+      const slugStr = c.slug ? String(c.slug) : '';
+      return !deletedIds.includes(idStr) && !deletedIds.includes(slugStr);
+    });
+
+    safeStorageWrite('cd_custom_courses', liveList);
+    broadcastCoursesUpdate(liveList);
+    return liveList;
+  }
+
+  const localList = getLiveCourses();
+  const deletedIds = safeStorageRead('cd_deleted_course_ids', []);
+  return localList.filter((c) => !deletedIds.includes(String(c._id)) && !deletedIds.includes(String(c.slug)));
 };
 
 export const getLiveCourseBySlug = (slug) => {
@@ -725,10 +729,9 @@ export const getLiveCourseBySlug = (slug) => {
 
 // Helper to ensure valid JWT token for MongoDB operations
 export const getValidAdminToken = async () => {
-  let token = localStorage.getItem('cd_token');
-  if (token && !token.startsWith('admin_jwt_') && token.split('.').length === 3) {
-    return token;
-  }
+  let token = localStorage.getItem('cd_admin_token') || localStorage.getItem('cd_token');
+  if (token) return token;
+
   try {
     const res = await axios.post(`${API_BASE_URL}/auth/login`, {
       email: 'admin@coursedivine.com',
@@ -736,31 +739,35 @@ export const getValidAdminToken = async () => {
     });
     if (res.data?.data?.token) {
       token = res.data.data.token;
-      localStorage.setItem('cd_token', token);
+      localStorage.setItem('cd_admin_token', token);
       return token;
     }
   } catch (err) {
     try {
-      const res2 = await axios.post(`${API_BASE_URL}/auth/login`, {
-        email: 'admin@learncoursedivine.com',
+      const res2 = await axios.post(`https://coursedivinewebsite.onrender.com/api/auth/login`, {
+        email: 'admin@coursedivine.com',
         password: 'Admin@123'
       });
       if (res2.data?.data?.token) {
         token = res2.data.data.token;
-        localStorage.setItem('cd_token', token);
+        localStorage.setItem('cd_admin_token', token);
         return token;
       }
     } catch (e2) {}
   }
-  return token;
+  return token || localStorage.getItem('cd_token');
 };
 
 export const saveCourseLive = async (courseData) => {
   const customCourses = safeStorageRead('cd_custom_courses', []);
   
-  const isExistingMongoCourse = courseData._id && !String(courseData._id).startsWith('c_') && /^[0-9a-fA-F]{24}$/.test(courseData._id);
   const slug = courseData.slug || courseData.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-  
+
+  // Remove from deleted list if re-added or edited
+  const deletedIds = safeStorageRead('cd_deleted_course_ids', []);
+  const cleanedDeleted = deletedIds.filter(id => id !== String(courseData._id) && id !== String(courseData.originalId) && id !== slug);
+  safeStorageWrite('cd_deleted_course_ids', cleanedDeleted);
+
   let safeLevel = courseData.level || 'Beginner';
   if (safeLevel === 'Beginner to Advanced' || !['Beginner', 'Intermediate', 'Advanced', 'All Levels'].includes(safeLevel)) {
     safeLevel = 'Beginner';
@@ -774,7 +781,7 @@ export const saveCourseLive = async (courseData) => {
     slug,
     description: desc,
     overview: (courseData.overview && courseData.overview.trim()) || desc,
-    category: courseData.category || 'Software & Web Development',
+    category: courseData.category || 'Programming & Software Development',
     level: safeLevel,
     isPublished: courseData.isPublished !== undefined ? courseData.isPublished : true,
     price: Number(courseData.price) || 499,
@@ -793,48 +800,55 @@ export const saveCourseLive = async (courseData) => {
     storePdfInDb(savedCourse._id, courseData.syllabusPdf, courseData.pdfFileName || 'Official Syllabus.pdf');
   }
 
-  // Direct Cloud Sync to MongoDB Atlas on Render API
+  // Target identifier for updating existing course (if editing)
+  const targetIdentifier = courseData.originalId || courseData._id || courseData.originalSlug;
+  const isEditMode = Boolean(targetIdentifier);
+
+  // Direct Dual Cloud Sync to MongoDB Atlas API
   try {
     const adminToken = await getValidAdminToken();
     const config = adminToken ? { headers: { Authorization: `Bearer ${adminToken}` } } : {};
 
-    let targetIdentifier = null;
-    if (courseData._id && /^[0-9a-fA-F]{24}$/.test(String(courseData._id))) {
-      targetIdentifier = courseData._id;
-    } else if (courseData.slug) {
-      targetIdentifier = courseData.slug;
-    }
-
-    if (targetIdentifier) {
+    if (isEditMode) {
       try {
         const res = await api.put(`/courses/${targetIdentifier}`, payload, config);
         if (res.data?.data) {
           savedCourse = res.data.data;
         }
       } catch (putErr) {
-        delete payload._id;
-        const res = await api.post('/courses', payload, config);
-        if (res.data?.data) {
-          savedCourse = res.data.data;
-        }
+        try {
+          const res = await axios.put(`https://coursedivinewebsite.onrender.com/api/courses/${targetIdentifier}`, payload, config);
+          if (res.data?.data) savedCourse = res.data.data;
+        } catch (e2) {}
       }
     } else {
       delete payload._id;
-      const res = await api.post('/courses', payload, config);
-      if (res.data?.data) {
-        savedCourse = res.data.data;
+      try {
+        const res = await api.post('/courses', payload, config);
+        if (res.data?.data) savedCourse = res.data.data;
+      } catch (e1) {
+        const res = await axios.post('https://coursedivinewebsite.onrender.com/api/courses', payload, config);
+        if (res.data?.data) savedCourse = res.data.data;
       }
     }
   } catch (err) {
     console.error('MongoDB cloud sync notice:', err.response?.data?.message || err.message);
   }
 
-  const existingIdx = customCourses.findIndex(c => c._id === savedCourse._id || c.slug === savedCourse.slug);
+  // In-Place Update or Insert (No duplicates!)
+  const existingIdx = customCourses.findIndex(c => 
+    (targetIdentifier && String(c._id) === String(targetIdentifier)) ||
+    (courseData._id && String(c._id) === String(courseData._id)) ||
+    (courseData.originalSlug && c.slug === courseData.originalSlug) ||
+    (c.slug === savedCourse.slug)
+  );
+
   if (existingIdx >= 0) {
-    customCourses[existingIdx] = savedCourse;
+    customCourses[existingIdx] = { ...customCourses[existingIdx], ...savedCourse };
   } else {
     customCourses.unshift(savedCourse);
   }
+
   safeStorageWrite('cd_custom_courses', customCourses);
   broadcastCoursesUpdate(customCourses);
   
@@ -842,15 +856,26 @@ export const saveCourseLive = async (courseData) => {
 };
 
 export const deleteCourseLive = async (courseId) => {
+  const targetStr = String(courseId);
+  const deletedIds = safeStorageRead('cd_deleted_course_ids', []);
+  if (!deletedIds.includes(targetStr)) {
+    deletedIds.push(targetStr);
+    safeStorageWrite('cd_deleted_course_ids', deletedIds);
+  }
+
   const customCourses = safeStorageRead('cd_custom_courses', []);
-  const updatedCustom = customCourses.filter(c => c._id !== courseId && c.slug !== courseId);
-  localStorage.setItem('cd_custom_courses', JSON.stringify(updatedCustom));
+  const updatedCustom = customCourses.filter(c => String(c._id) !== targetStr && String(c.slug) !== targetStr);
+  safeStorageWrite('cd_custom_courses', updatedCustom);
   broadcastCoursesUpdate(updatedCustom);
   
   try {
     const adminToken = await getValidAdminToken();
     const config = adminToken ? { headers: { Authorization: `Bearer ${adminToken}` } } : {};
-    await api.delete(`/courses/${courseId}`, config);
+    try {
+      await api.delete(`/courses/${courseId}`, config);
+    } catch (e1) {
+      await axios.delete(`https://coursedivinewebsite.onrender.com/api/courses/${courseId}`, config).catch(() => {});
+    }
   } catch (err) {
     console.error('MongoDB cloud delete notice:', err.response?.data?.message || err.message);
   }
@@ -864,7 +889,7 @@ export const toggleCourseStatusLive = async (courseId, currentStatus) => {
   const idx = customCourses.findIndex(c => c._id === courseId || c.slug === courseId);
   if (idx >= 0) {
     customCourses[idx] = { ...customCourses[idx], isPublished: newStatus };
-    localStorage.setItem('cd_custom_courses', JSON.stringify(customCourses));
+    safeStorageWrite('cd_custom_courses', customCourses);
     broadcastCoursesUpdate(customCourses);
   }
 
@@ -880,12 +905,17 @@ export const toggleCourseStatusLive = async (courseId, currentStatus) => {
 };
 
 export const clearAllCoursesLive = async () => {
-  localStorage.setItem('cd_custom_courses', JSON.stringify([]));
+  safeStorageWrite('cd_custom_courses', []);
+  safeStorageWrite('cd_deleted_course_ids', []);
   broadcastCoursesUpdate([]);
   try {
     const adminToken = await getValidAdminToken();
     const config = adminToken ? { headers: { Authorization: `Bearer ${adminToken}` } } : {};
-    await api.delete('/courses/clear-all', config);
+    try {
+      await api.delete('/courses/clear-all', config);
+    } catch (e1) {
+      await axios.delete('https://coursedivinewebsite.onrender.com/api/courses/clear-all', config).catch(() => {});
+    }
   } catch (err) {
     console.error('Clear MongoDB notice:', err.response?.data?.message || err.message);
   }

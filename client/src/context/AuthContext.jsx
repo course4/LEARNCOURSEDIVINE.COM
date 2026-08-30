@@ -25,17 +25,35 @@ export const AuthProvider = ({ children }) => {
 
       if (token && storedUser) {
         try {
-          setUser(safeJsonParse(storedUser));
+          const parsed = safeJsonParse(storedUser);
+          if (parsed) {
+            setUser(parsed);
+          }
           const res = await api.get('/auth/me');
           if (res.data?.success) {
             setUser(res.data.data);
             localStorage.setItem('cd_user', JSON.stringify(res.data.data));
           }
         } catch (err) {
-          if (storedUser) {
-            setUser(safeJsonParse(storedUser));
+          if (err.response?.status === 401 || err.response?.status === 403) {
+            setUser(null);
+            localStorage.removeItem('cd_token');
+            localStorage.removeItem('cd_user');
+          } else {
+            const parsed = safeJsonParse(storedUser);
+            if (parsed && !token.startsWith('admin_jwt_')) {
+              setUser(parsed);
+            } else {
+              setUser(null);
+              localStorage.removeItem('cd_token');
+              localStorage.removeItem('cd_user');
+            }
           }
         }
+      } else {
+        setUser(null);
+        localStorage.removeItem('cd_token');
+        localStorage.removeItem('cd_user');
       }
       setLoading(false);
     };
@@ -43,12 +61,18 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
-  // Strict Database Customer Login
+  // Database Customer & Master Admin Login via API (with Render cloud backup)
   const login = async (email, password) => {
     const cleanEmail = email.trim().toLowerCase();
 
     try {
-      const res = await api.post('/auth/login', { email: cleanEmail, password });
+      let res;
+      try {
+        res = await api.post('/auth/login', { email: cleanEmail, password });
+      } catch (e1) {
+        res = await axios.post('https://coursedivinewebsite.onrender.com/api/auth/login', { email: cleanEmail, password });
+      }
+
       if (res.data?.success) {
         const userData = res.data.data;
         setUser(userData);
@@ -66,94 +90,13 @@ export const AuthProvider = ({ children }) => {
         return { success: true, user: userData };
       }
     } catch (error) {
-      // Check customer database in storage
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Invalid email or password'
+      };
     }
 
-    // Master Admin authentication with real backend JWT token
-    if (
-      cleanEmail === 'coursedivine@admin' ||
-      cleanEmail === 'coursedivine@admin.com' ||
-      cleanEmail === 'admin@coursedivine.com' ||
-      cleanEmail === 'admin@learncoursedivine.com' ||
-      cleanEmail === 'admin'
-    ) {
-      if (password === '9876543210' || password === 'Admin@123') {
-        try {
-          const res = await api.post('/auth/login', { email: cleanEmail, password });
-          if (res.data?.success && res.data.data?.token) {
-            const userData = res.data.data;
-            setUser(userData);
-            localStorage.setItem('cd_token', userData.token);
-            localStorage.setItem('cd_user', JSON.stringify(userData));
-
-            setModalState({
-              show: true,
-              type: 'admin_login',
-              name: userData.name,
-              role: 'admin'
-            });
-
-            return { success: true, user: userData };
-          }
-        } catch (e) {}
-
-        const adminUser = {
-          _id: 'admin_master_1',
-          name: 'Course Divine Administrator',
-          email: 'coursedivine@admin',
-          role: 'admin',
-          avatar: '',
-          token: 'admin_jwt_' + Date.now()
-        };
-        setUser(adminUser);
-        localStorage.setItem('cd_token', adminUser.token);
-        localStorage.setItem('cd_user', JSON.stringify(adminUser));
-
-        setModalState({
-          show: true,
-          type: 'admin_login',
-          name: adminUser.name,
-          role: 'admin'
-        });
-
-        return { success: true, user: adminUser };
-      } else {
-        return { success: false, message: 'Incorrect password for Admin account.' };
-      }
-    }
-
-    // Check local database for registered customer accounts
-    const db = safeJsonParse(localStorage.getItem('cd_registered_users_db'), []);
-    const existingUser = db.find((u) => u.email && u.email.toLowerCase() === cleanEmail);
-
-    if (existingUser) {
-      if (existingUser.password === password) {
-        const userData = {
-          ...existingUser,
-          token: existingUser.token || ('jwt_' + Date.now())
-        };
-        setUser(userData);
-        localStorage.setItem('cd_token', userData.token);
-        localStorage.setItem('cd_user', JSON.stringify(userData));
-
-        const role = (userData.role === 'admin' || cleanEmail.includes('admin')) ? 'admin' : 'user';
-        setModalState({
-          show: true,
-          type: role === 'admin' ? 'admin_login' : 'login',
-          name: userData.name,
-          role
-        });
-
-        return { success: true, user: userData };
-      } else {
-        return { success: false, message: 'Incorrect password. Please try again.' };
-      }
-    }
-
-    return {
-      success: false,
-      message: 'No registered account found with this email. Please click "Sign up" to create an account first.'
-    };
+    return { success: false, message: 'Invalid email or password' };
   };
 
   // Google One-Click OAuth Authentication & Auto-Registration
@@ -266,19 +209,24 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    const currentName = user?.name || '';
+    const currentRole = isUserAdmin ? 'admin' : 'user';
+
+    setUser(null);
+    localStorage.removeItem('cd_token');
+    localStorage.removeItem('cd_user');
+
     setModalState({
       show: true,
       type: 'logout',
-      name: user?.name || '',
-      role: isUserAdmin ? 'admin' : 'user'
+      name: currentName,
+      role: currentRole
     });
 
     setTimeout(() => {
-      setUser(null);
-      localStorage.removeItem('cd_token');
-      localStorage.removeItem('cd_user');
+      setModalState({ show: false, type: 'login', name: '', role: 'user' });
       window.location.hash = '#/';
-    }, 10000);
+    }, 1500);
   };
 
   const updateUserData = (updatedData) => {

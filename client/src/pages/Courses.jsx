@@ -123,11 +123,14 @@ const Courses = () => {
           );
         });
       } else {
-        list = list.filter(
-          (c) =>
-            (c.category || '').toLowerCase().includes(catLower) ||
-            catLower.includes((c.category || '').toLowerCase())
-        );
+        const catTokens = catLower.split(/[\s,&]+/).filter((t) => t.length > 2);
+        list = list.filter((c) => {
+          const cCatLower = (c.category || '').toLowerCase().trim();
+          const titleLower = (c.title || '').toLowerCase();
+          if (!cCatLower) return true;
+          if (cCatLower.includes(catLower) || catLower.includes(cCatLower)) return true;
+          return catTokens.some((token) => cCatLower.includes(token) || titleLower.includes(token));
+        });
       }
     }
 
@@ -166,7 +169,8 @@ const Courses = () => {
 
   // Pagination calculations
   const totalPages = Math.ceil(filteredCourses.length / coursesPerPage) || 1;
-  const indexOfLastCourse = currentPage * coursesPerPage;
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const indexOfLastCourse = safeCurrentPage * coursesPerPage;
   const indexOfFirstCourse = indexOfLastCourse - coursesPerPage;
   const currentCourses = filteredCourses.slice(indexOfFirstCourse, indexOfLastCourse);
 

@@ -4,12 +4,12 @@ import confetti from 'canvas-confetti';
 
 const AuthStatusModal = ({ state, onClose }) => {
   const [progress, setProgress] = useState(0);
-  const [secondsRemaining, setSecondsRemaining] = useState(10);
+  const [secondsRemaining, setSecondsRemaining] = useState(1);
 
   useEffect(() => {
     if (!state?.show) {
       setProgress(0);
-      setSecondsRemaining(10);
+      setSecondsRemaining(1);
       return;
     }
 
@@ -25,8 +25,8 @@ const AuthStatusModal = ({ state, onClose }) => {
       } catch (e) {}
     }
 
-    const DURATION_MS = 10000; // 10 seconds
-    const STEP_MS = 100;
+    const DURATION_MS = 1500; // 1.5 seconds fast transition
+    const STEP_MS = 50;
 
     const interval = setInterval(() => {
       setProgress((prev) => {

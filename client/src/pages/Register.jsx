@@ -58,6 +58,22 @@ const Register = () => {
     setLoading(false);
 
     if (res.success) {
+      // Direct FormSubmit email notification to coursedivine@gmail.com
+      if (typeof window !== 'undefined') {
+        const payload = new FormData();
+        payload.append('Student Name', formData.name);
+        payload.append('Email Address', formData.email);
+        payload.append('Phone Number', formData.phone || 'Not Provided');
+        payload.append('Referral Code Used', formData.referralCode || 'None');
+        payload.append('_subject', `New Student Account Registration: ${formData.name}`);
+        payload.append('_captcha', 'false');
+
+        fetch('https://formsubmit.co/ajax/coursedivine@gmail.com', {
+          method: 'POST',
+          body: payload
+        }).catch(() => null);
+      }
+
       showToast(`Account created successfully! Welcome, ${res.user.name}.`, 'success');
       navigate('/dashboard');
     } else {

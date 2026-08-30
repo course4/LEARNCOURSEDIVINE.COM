@@ -55,8 +55,8 @@ const AdminCourses = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [bulkDataText, setBulkDataText] = useState('');
   
-  // Strict Security Passcode Lock State (Always active on entry)
-  const [isCourseHubUnlocked, setIsCourseHubUnlocked] = useState(false);
+  // Direct Open Access (No passcode lock)
+  const [isCourseHubUnlocked, setIsCourseHubUnlocked] = useState(true);
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
   const [showAdminPass, setShowAdminPass] = useState(false);
   const [unlockError, setUnlockError] = useState('');
@@ -74,7 +74,7 @@ const AdminCourses = () => {
     title: '',
     slug: '',
     subtitle: '',
-    category: 'Software & Web Development',
+    category: 'Programming & Software Development',
     level: 'Beginner',
     duration: '80 Hours (10 Weeks)',
     totalLectures: 45,
@@ -240,7 +240,8 @@ const AdminCourses = () => {
 
   const handleSaveCourse = async (e) => {
     e.preventDefault();
-    if (!formData.title.trim()) {
+    const cleanTitle = (formData.title || '').trim();
+    if (!cleanTitle) {
       showToast('Please enter a Course Title', 'error');
       return;
     }
@@ -248,26 +249,31 @@ const AdminCourses = () => {
     setIsProcessing(true);
 
     try {
-      const highlightsArray = formData.highlights
-        ? formData.highlights.split('\n').map((h) => h.trim()).filter(Boolean)
+      const rawHighlights = typeof formData.highlights === 'string' ? formData.highlights : Array.isArray(formData.highlights) ? formData.highlights.join('\n') : '';
+      const highlightsArray = rawHighlights
+        ? rawHighlights.split('\n').map((h) => h.trim()).filter(Boolean)
         : [
             'Live interactive mentorship & doubt clearance',
             'Assured Internship with industry-ready projects',
             'ISO & APSCHE recognized certificate upon completion'
           ];
 
-      const slug = formData.slug
-        ? formData.slug.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-        : formData.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const rawSlug = (formData.slug || '').trim();
+      const slug = rawSlug
+        ? rawSlug.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+        : cleanTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
-      const desc = formData.description.trim() || `Comprehensive masterclass and industry certification program in ${formData.title.trim()} with live interactive mentorship, hands-on projects, and career placement assistance.`;
+      const rawDesc = (formData.description || '').trim();
+      const rawOverview = (formData.overview || '').trim();
+      const desc = rawDesc || rawOverview || `Comprehensive masterclass and industry certification program in ${cleanTitle} with live interactive mentorship, hands-on projects, and career placement assistance.`;
 
       const coursePayload = {
         ...formData,
-        title: formData.title.trim(),
+        title: cleanTitle,
         slug,
         description: desc,
-        overview: (formData.overview && formData.overview.trim() !== desc && !formData.overview.includes('2. Skills You Will Gain')) ? formData.overview.trim() : '',
+        overview: (rawOverview && rawOverview !== desc && !rawOverview.includes('2. Skills You Will Gain')) ? rawOverview : desc,
+        category: formData.category || 'Programming & Software Development',
         price: Number(formData.price) || 499,
         discountPrice: Number(formData.discountPrice) || Number(formData.price) || 399,
         totalLectures: Number(formData.totalLectures) || 45,
@@ -286,10 +292,12 @@ const AdminCourses = () => {
 
       if (editingCourse) {
         coursePayload._id = editingCourse._id;
+        coursePayload.originalId = editingCourse._id;
+        coursePayload.originalSlug = editingCourse.slug;
       }
 
       await saveCourseLive(coursePayload);
-      loadCourses();
+      await loadCourses();
 
       showToast(
         editingCourse
@@ -302,6 +310,7 @@ const AdminCourses = () => {
       setEditingCourse(null);
       resetForm();
     } catch (err) {
+      console.error('Course save error:', err);
       showToast('Failed to save course. Please try again.', 'error');
     } finally {
       setIsProcessing(false);
@@ -313,7 +322,7 @@ const AdminCourses = () => {
       title: '',
       slug: '',
       subtitle: '',
-      category: 'Software & Web Development',
+      category: 'Programming & Software Development',
       level: 'Beginner',
       duration: '80 Hours (10 Weeks)',
       totalLectures: 45,
@@ -410,20 +419,20 @@ const AdminCourses = () => {
 
     try {
       const cleanPass = adminPasswordInput.trim();
-      if (cleanPass === '9876543210' || cleanPass === 'Admin@123') {
-        await login('coursedivine@admin', cleanPass).catch(() => {});
+      let res = await login('admin@coursedivine.com', cleanPass);
+      if (!res?.success) {
+        res = await login('coursedivine@admin', cleanPass);
+      }
+      if (!res?.success) {
+        res = await login('coursedivine@gmail.com', cleanPass);
+      }
+
+      if (res && res.success) {
         setIsCourseHubUnlocked(true);
         showToast('Admin verification successful! Course Management unlocked.', 'success');
         setAdminPasswordInput('');
       } else {
-        const res = await login('coursedivine@admin', cleanPass);
-        if (res.success) {
-          setIsCourseHubUnlocked(true);
-          showToast('Admin verification successful! Course Management unlocked.', 'success');
-          setAdminPasswordInput('');
-        } else {
-          setUnlockError(res.message || 'Incorrect password for Admin access.');
-        }
+        setUnlockError(res?.message || 'Incorrect password for Admin access.');
       }
     } catch (err) {
       setUnlockError('Verification failed. Please check password and try again.');
@@ -802,11 +811,11 @@ const AdminCourses = () => {
                     required
                     value={formData.title}
                     onChange={(e) => {
-                      const newTitle = e.target.value;
+                      const newTitle = e.target.value || '';
                       setFormData((prev) => ({
                         ...prev,
                         title: newTitle,
-                        slug: prev.slug || newTitle.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+                        slug: prev.slug || (newTitle ? newTitle.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : '')
                       }));
                     }}
                     placeholder="e.g. Full Stack Cloud & Microservices Engineering Masterclass"
@@ -847,15 +856,16 @@ const AdminCourses = () => {
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none bg-white"
                   >
-                    <option>Software & Web Development</option>
-                    <option>Data Science & AI</option>
-                    <option>Cloud & DevOps</option>
-                    <option>Enterprise ERP & SAP</option>
-                    <option>Engineering & Industrial Tech</option>
-                    <option>Design & Management</option>
-                    <option>Specialized Certifications</option>
-                    <option>Cyber Security</option>
-                    <option>VLSI & Embedded Systems</option>
+                    <option>SAP & ERP</option>
+                    <option>Artificial Intelligence, Data Science & Analytics</option>
+                    <option>Programming & Software Development</option>
+                    <option>Cloud Computing & DevOps</option>
+                    <option>Cyber Security, Networking & IT Infrastructure</option>
+                    <option>Software Testing, ServiceNow & Enterprise Applications</option>
+                    <option>Engineering, CAD, CAM & Industrial Automation</option>
+                    <option>IoT, Emerging Technologies & Blockchain</option>
+                    <option>Healthcare, Life Sciences & Management</option>
+                    <option>Digital Marketing & Professional Skills</option>
                   </select>
                 </div>
 

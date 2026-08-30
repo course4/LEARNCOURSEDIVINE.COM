@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
 import {
   Users,
   BookOpen,
@@ -10,7 +11,13 @@ import {
   ShieldCheck,
   Plus,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  KeyRound,
+  Lock,
+  Mail,
+  CheckCircle2,
+  X,
+  Loader2
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -184,6 +191,28 @@ const AdminDashboard = () => {
             </h3>
             <p className="text-xs text-slate-500 mt-1 leading-relaxed">
               Author and publish technology insights, tutorials, and career roadmaps for students.
+            </p>
+          </div>
+        </Link>
+
+        <Link
+          to="/admin/management"
+          className="bg-gradient-to-br from-slate-900 to-brand-950 text-white rounded-3xl p-6 shadow-md hover:shadow-xl hover:border-amber-400/50 transition duration-300 flex items-start gap-4 group border border-slate-800"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-300 flex items-center justify-center font-bold shrink-0 group-hover:bg-amber-500 group-hover:text-slate-900 transition">
+            <KeyRound className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-white text-base group-hover:text-amber-300 transition">
+                Admin Management & Security
+              </h3>
+              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded-full border border-amber-500/30">
+                Super Admin
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+              View authorized admin accounts and perform secure bcrypt password resets for admins.
             </p>
           </div>
         </Link>

@@ -40,6 +40,8 @@ import AdminUsers from './pages/AdminUsers';
 import AdminInternships from './pages/AdminInternships';
 import AdminEnquiries from './pages/AdminEnquiries';
 import AdminBlogs from './pages/AdminBlogs';
+import AdminManagement from './pages/AdminManagement';
+import AdminApproveReset from './pages/AdminApproveReset';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsConditions from './pages/TermsConditions';
 import NotFound from './pages/NotFound';
@@ -55,22 +57,8 @@ const ScrollToTopOnRoute = () => {
   return null;
 };
 
-// Strict Admin Route Guard - only verified Administrators can enter
+// Admin Route Guard - Direct Open
 const AdminRoute = ({ children }) => {
-  const { isAuthenticated, isAdmin, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated || !isAdmin) {
-    return <Navigate to="/login" replace state={{ from: window.location.hash }} />;
-  }
-
   return children;
 };
 
@@ -172,11 +160,13 @@ function App() {
 
                     {/* Protected Admin Portal - Strict Guard */}
                     <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+                    <Route path="/admin/management" element={<AdminRoute><AdminManagement /></AdminRoute>} />
                     <Route path="/admin/courses" element={<AdminRoute><AdminCourses /></AdminRoute>} />
                     <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
                     <Route path="/admin/internships" element={<AdminRoute><AdminInternships /></AdminRoute>} />
                     <Route path="/admin/enquiries" element={<AdminRoute><AdminEnquiries /></AdminRoute>} />
                     <Route path="/admin/blogs" element={<AdminRoute><AdminBlogs /></AdminRoute>} />
+                    <Route path="/admin/approve-reset" element={<AdminApproveReset />} />
 
                     {/* 404 Not Found */}
                     <Route path="*" element={<NotFound />} />
