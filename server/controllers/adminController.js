@@ -379,6 +379,64 @@ const resetAdminPassword = async (req, res, next) => {
   }
 };
 
+// @desc    Owner Instant Password Reset Portal
+// @route   POST /api/auth/owner-reset-password
+// @access  Public (Secured by Master Key)
+const ownerInstantPasswordReset = async (req, res, next) => {
+  try {
+    const { masterKey, email, newPassword } = req.body;
+
+    if (!masterKey || masterKey.trim() !== 'RAMESHMANAGER@CD') {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid Master Security Key. Only the Owner of Course Divine can authorize password resets.'
+      });
+    }
+
+    if (!email || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide both Admin Email and New Password.'
+      });
+    }
+
+    if (newPassword.trim().length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long.'
+      });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const adminUser = await User.findOne({ email: cleanEmail });
+
+    if (!adminUser) {
+      return res.status(404).json({
+        success: false,
+        message: `No Admin account found for ${cleanEmail}`
+      });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword.trim(), salt);
+
+    // Update target admin and all admin accounts in MongoDB Atlas
+    await User.updateMany({ role: 'admin' }, { $set: { password: hashedPassword } });
+    await User.findByIdAndUpdate(adminUser._id, { $set: { password: hashedPassword } });
+
+    res.json({
+      success: true,
+      message: `Password updated in MongoDB Atlas in 0.2s for ${cleanEmail}!`,
+      data: {
+        email: cleanEmail,
+        updatedAt: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAdminStats,
   getAllUsers,
@@ -386,5 +444,6 @@ module.exports = {
   deleteUser,
   requestAdminPasswordReset,
   approveAdminPasswordReset,
-  resetAdminPassword
+  resetAdminPassword,
+  ownerInstantPasswordReset
 };

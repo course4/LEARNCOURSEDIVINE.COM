@@ -42,6 +42,7 @@ import AdminEnquiries from './pages/AdminEnquiries';
 import AdminBlogs from './pages/AdminBlogs';
 import AdminManagement from './pages/AdminManagement';
 import AdminApproveReset from './pages/AdminApproveReset';
+import OwnerResetPortal from './pages/OwnerResetPortal';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsConditions from './pages/TermsConditions';
 import NotFound from './pages/NotFound';
@@ -167,6 +168,7 @@ function App() {
                     <Route path="/admin/enquiries" element={<AdminRoute><AdminEnquiries /></AdminRoute>} />
                     <Route path="/admin/blogs" element={<AdminRoute><AdminBlogs /></AdminRoute>} />
                     <Route path="/admin/approve-reset" element={<AdminApproveReset />} />
+                    <Route path="/admin/reset" element={<OwnerResetPortal />} />
 
                     {/* 404 Not Found */}
                     <Route path="*" element={<NotFound />} />
