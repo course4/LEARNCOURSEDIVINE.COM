@@ -77,10 +77,14 @@ const generalLimiter = rateLimit({
 app.use('/api', generalLimiter);
 
 // Health Check API
+const mongoose = require('mongoose');
 app.get(['/api/health', '/health'], (req, res) => {
+  const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
   res.json({
     status: 'online',
     platform: 'Course Divine API',
+    dbState: states[mongoose.connection.readyState] || mongoose.connection.readyState,
+    dbHost: mongoose.connection.host || null,
     environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString()
   });
