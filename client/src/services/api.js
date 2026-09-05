@@ -722,7 +722,7 @@ const broadcastCoursesUpdate = (courses) => {
   }
 };
 
-const CD_COURSES_VERSION = '2026_v245';
+const CD_COURSES_VERSION = '2026_v254';
 
 // Unified Synchronized Course Store Manager (Pure Direct MongoDB Atlas Cloud Sync & Local Persistence)
 export const getLiveCourses = () => {
