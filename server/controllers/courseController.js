@@ -79,9 +79,12 @@ const getCourses = async (req, res, next) => {
 
     const total = await Course.countDocuments(query);
     const courses = await Course.find(query)
+      .select('-syllabusPdf')
       .sort(sortOptions)
+      .allowDiskUse(true)
       .skip(skip)
-      .limit(limitNum);
+      .limit(limitNum)
+      .lean();
 
     res.json({
       success: true,

@@ -5,22 +5,17 @@
   RewriteEngine On
   RewriteBase /
 
-  # Strictly scope rules ONLY to learncoursedivine.com so other websites on Bluehost are 100% untouched!
-  
   # Redirect www to non-www canonical URL
-  RewriteCond %{HTTP_HOST} ^www\.learncoursedivine\.com$ [NC]
-  RewriteRule ^(.*)$ https://learncoursedivine.com/$1 [L,R=301]
+  RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
+  RewriteRule ^(.*)$ https://%1/$1 [L,R=301]
 
-  # Force HTTPS ONLY for learncoursedivine.com
+  # Force HTTPS
   RewriteCond %{HTTPS} off
-  RewriteCond %{HTTP_HOST} ^(www\.)?learncoursedivine\.com$ [NC]
   RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-  # Redirect all non-file/directory requests to index.html for Single Page Application (SPA) routing ONLY for learncoursedivine.com
-  RewriteCond %{HTTP_HOST} ^(www\.)?learncoursedivine\.com$ [NC]
-  RewriteRule ^index\.html$ - [L]
-
-  RewriteCond %{HTTP_HOST} ^(www\.)?learncoursedivine\.com$ [NC]
+  # Single Page Application (SPA) routing for React Router (Exclude Node.js backend routes)
+  RewriteCond %{REQUEST_URI} !^/server
+  RewriteCond %{REQUEST_URI} !^/api
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule . /index.html [L]

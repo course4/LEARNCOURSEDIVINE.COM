@@ -55,8 +55,8 @@ const AdminCourses = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [bulkDataText, setBulkDataText] = useState('');
   
-  // Direct Open Access (No passcode lock)
-  const [isCourseHubUnlocked, setIsCourseHubUnlocked] = useState(true);
+  // Enforce Admin Security Lock before accessing Course Management
+  const [isCourseHubUnlocked, setIsCourseHubUnlocked] = useState(false);
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
   const [showAdminPass, setShowAdminPass] = useState(false);
   const [unlockError, setUnlockError] = useState('');

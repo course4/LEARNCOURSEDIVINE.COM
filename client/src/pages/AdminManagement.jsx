@@ -318,9 +318,9 @@ const AdminManagement = () => {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold uppercase tracking-wider mb-2">
             <ShieldCheck className="w-3.5 h-3.5" /> Owner / Super Admin Authorization
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Admin Accounts & Password Management</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight">Authorized Admin Accounts</h1>
           <p className="text-xs text-slate-300 mt-1">
-            View all administrator accounts and reset passwords with 256-bit bcrypt encryption.
+            View authorized administrator accounts and credentials status.
           </p>
         </div>
       </div>
@@ -383,7 +383,6 @@ const AdminManagement = () => {
                   <th className="py-4 px-6">Admin User</th>
                   <th className="py-4 px-6">Email Address</th>
                   <th className="py-4 px-6">Role / Status</th>
-                  <th className="py-4 px-6 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
@@ -410,15 +409,6 @@ const AdminManagement = () => {
                         {adminItem.role || 'Admin'}
                       </span>
                     </td>
-                    <td className="py-4 px-6 text-right">
-                      <button
-                        onClick={() => handleOpenResetModal(adminItem)}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-sm hover:shadow transition"
-                      >
-                        <KeyRound className="w-3.5 h-3.5" />
-                        Reset Password
-                      </button>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -427,127 +417,6 @@ const AdminManagement = () => {
         )}
       </div>
 
-      {/* Secure Reset Password Modal */}
-      {selectedAdmin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-100 relative">
-            <button
-              onClick={handleCloseResetModal}
-              className="absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                <Lock className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Reset Admin Password</h2>
-                <p className="text-xs text-slate-500">
-                  Target Account: <strong className="text-slate-800">{selectedAdmin.email}</strong>
-                </p>
-              </div>
-            </div>
-
-            {modalError && (
-              <div className="mb-4 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
-                {modalError}
-              </div>
-            )}
-
-            <form onSubmit={handleResetSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Admin Name / Email
-                </label>
-                <div className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <UserIcon className="w-4 h-4 text-slate-400" />
-                  <span>{selectedAdmin.name} ({selectedAdmin.email})</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  New Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showNewPass ? 'text' : 'password'}
-                    required
-                    minLength={6}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password (min. 6 chars)"
-                    className="w-full px-4 py-3 pr-10 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 text-sm outline-none transition"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPass(!showNewPass)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    {showNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Confirm New Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showConfirmPass ? 'text' : 'password'}
-                    required
-                    minLength={6}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Re-enter new password to confirm"
-                    className="w-full px-4 py-3 pr-10 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 text-sm outline-none transition"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPass(!showConfirmPass)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    {showConfirmPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs leading-relaxed font-medium">
-                🔒 <strong>Owner Authorization Required:</strong> This action will encrypt the new password with bcrypt and update MongoDB Atlas immediately.
-              </div>
-
-              <div className="flex items-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={handleCloseResetModal}
-                  className="w-1/2 py-3 px-4 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs transition"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={modalLoading}
-                  className="w-1/2 py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md transition flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {modalLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" /> Resetting...
-                    </>
-                  ) : (
-                    <>
-                      <KeyRound className="w-4 h-4" /> Reset Password
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

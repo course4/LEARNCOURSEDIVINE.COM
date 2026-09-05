@@ -213,7 +213,7 @@ const Courses = () => {
             Learning Lounge
           </h1>
           <p className="text-brand-100/80 text-sm leading-relaxed">
-            Explore 50+ verified engineering, cloud, data science, ERP, and architecture masterclasses. All certifications include lifetime updates and placement support.
+            Explore {allCourses.length > 0 ? `${allCourses.length}+` : 'all'} verified engineering, cloud, data science, ERP, and architecture masterclasses. All certifications include lifetime updates and placement support.
           </p>
         </div>
       </div>
@@ -229,7 +229,7 @@ const Courses = () => {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search 50+ courses (e.g. Python, Azure, SAP, VLSI, SolidWorks)..."
+                placeholder={`Search ${allCourses.length || ''} courses (e.g. Python, Azure, SAP, VLSI, SolidWorks)...`}
                 className="w-full pl-11 pr-24 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition"
               />
               {search && (

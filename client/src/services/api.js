@@ -1,4 +1,5 @@
 import axios from 'axios';
+import seedCoursesData from './seedCourses.json';
 import {
   nitheeshKumarImg,
   cmaCgmLogo,
@@ -22,21 +23,21 @@ import {
   centuryPulpPaperLogo
 } from '../assets/placements';
 
-// In-Memory Fallback Seed Store with All 10 Verified Course Divine Categories
+// In-Memory Fallback Seed Store with All 10 Verified Course Divine Categories & Full Database Seed
 export const fallbackStore = {
   categories: [
-    { _id: 'cat1', name: 'SAP & ERP', slug: 'sap-erp', description: 'SAP ABAP, S/4HANA, Fiori, HCM, FSCD, MM, SD & Enterprise ERP Systems.', icon: 'Brain', courseCount: 15 },
-    { _id: 'cat2', name: 'Artificial Intelligence, Data Science & Analytics', slug: 'ai-data-science-analytics', description: 'AI, Machine Learning, Data Science, Python, R, SAS, Power BI & Analytics.', icon: 'Sparkles', courseCount: 18 },
-    { _id: 'cat3', name: 'Programming & Software Development', slug: 'programming-software-development', description: 'Full Stack Web Development, Python, Java, .NET, Node.js & Software Engineering.', icon: 'Code', courseCount: 22 },
-    { _id: 'cat4', name: 'Cloud Computing & DevOps', slug: 'cloud-computing-devops', description: 'AWS, Azure, Google Cloud, Docker, Kubernetes, CI/CD & Cloud Infrastructure.', icon: 'Cloud', courseCount: 14 },
-    { _id: 'cat5', name: 'Cyber Security, Networking & IT Infrastructure', slug: 'cyber-security-networking-it', description: 'Ethical Hacking, Network Security, CCNA, Cyber Defense & IT Infrastructure.', icon: 'Shield', courseCount: 12 },
-    { _id: 'cat6', name: 'Software Testing, ServiceNow & Enterprise Applications', slug: 'software-testing-servicenow-enterprise', description: 'Selenium, Automation Testing, ServiceNow, Pega LSA & Enterprise Tools.', icon: 'CheckCircle', courseCount: 10 },
-    { _id: 'cat7', name: 'Engineering, CAD, CAM & Industrial Automation', slug: 'engineering-cad-cam-automation', description: 'AutoCAD, SolidWorks, ANSYS, STAAD Pro, PLC SCADA, VLSI & BIM.', icon: 'Terminal', courseCount: 20 },
-    { _id: 'cat8', name: 'IoT, Emerging Technologies & Blockchain', slug: 'iot-emerging-tech-blockchain', description: 'Internet of Things, Embedded Systems, Smart Tech & Blockchain Development.', icon: 'Layers', courseCount: 8 },
-    { _id: 'cat9', name: 'Healthcare, Life Sciences & Management', slug: 'healthcare-life-sciences-management', description: 'Clinical Research, Pharmacovigilance, Healthcare Analytics & Hospital Admin.', icon: 'Heart', courseCount: 9 },
-    { _id: 'cat10', name: 'Digital Marketing & Professional Skills', slug: 'digital-marketing-professional-skills', description: 'SEO, Performance Marketing, UI/UX Design, Product Management & Soft Skills.', icon: 'Layout', courseCount: 11 }
+    { _id: 'cat1', name: 'SAP & ERP', slug: 'sap-erp', description: 'SAP ABAP, S/4HANA, Fiori, HCM, FSCD, MM, SD & Enterprise ERP Systems.', icon: 'Brain', courseCount: 75 },
+    { _id: 'cat2', name: 'Artificial Intelligence, Data Science & Analytics', slug: 'ai-data-science-analytics', description: 'AI, Machine Learning, Data Science, Python, R, SAS, Power BI & Analytics.', icon: 'Sparkles', courseCount: 23 },
+    { _id: 'cat3', name: 'Programming & Software Development', slug: 'programming-software-development', description: 'Full Stack Web Development, Python, Java, .NET, Node.js & Software Engineering.', icon: 'Code', courseCount: 40 },
+    { _id: 'cat4', name: 'Cloud Computing & DevOps', slug: 'cloud-computing-devops', description: 'AWS, Azure, Google Cloud, Docker, Kubernetes, CI/CD & Cloud Infrastructure.', icon: 'Cloud', courseCount: 22 },
+    { _id: 'cat5', name: 'Cyber Security, Networking & IT Infrastructure', slug: 'cyber-security-networking-it', description: 'Ethical Hacking, Network Security, CCNA, Cyber Defense & IT Infrastructure.', icon: 'Shield', courseCount: 8 },
+    { _id: 'cat6', name: 'Software Testing, ServiceNow & Enterprise Applications', slug: 'software-testing-servicenow-enterprise', description: 'Selenium, Automation Testing, ServiceNow, Pega LSA & Enterprise Tools.', icon: 'CheckCircle', courseCount: 12 },
+    { _id: 'cat7', name: 'Engineering, CAD, CAM & Industrial Automation', slug: 'engineering-cad-cam-automation', description: 'AutoCAD, SolidWorks, ANSYS, STAAD Pro, PLC SCADA, VLSI & BIM.', icon: 'Terminal', courseCount: 29 },
+    { _id: 'cat8', name: 'IoT, Emerging Technologies & Blockchain', slug: 'iot-emerging-tech-blockchain', description: 'Internet of Things, Embedded Systems, Smart Tech & Blockchain Development.', icon: 'Layers', courseCount: 16 },
+    { _id: 'cat9', name: 'Healthcare, Life Sciences & Management', slug: 'healthcare-life-sciences-management', description: 'Clinical Research, Pharmacovigilance, Healthcare Analytics & Hospital Admin.', icon: 'Heart', courseCount: 12 },
+    { _id: 'cat10', name: 'Digital Marketing & Professional Skills', slug: 'digital-marketing-professional-skills', description: 'SEO, Performance Marketing, UI/UX Design, Product Management & Soft Skills.', icon: 'Layout', courseCount: 8 }
   ],
-  courses: [],
+  courses: seedCoursesData,
 
   testimonials: [
     {
@@ -573,12 +574,13 @@ Job readiness is not about knowing everything. It is the ability to demonstrate 
   ]
 };
 
-// Live Production & Local Host API URL Handler
 export const API_BASE_URL =
   import.meta.env.VITE_API_URL ||
   (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://localhost:5000/api'
-    : 'https://coursedivinewebsite.onrender.com/api');
+    : (typeof window !== 'undefined' && window.location.hostname.includes('learncoursedivine.com')
+        ? '/server/api'
+        : 'https://coursedivinewebsite.onrender.com/api'));
 
 // Axios Instance
 const api = axios.create({
@@ -642,8 +644,57 @@ const safeStorageWrite = (key, data) => {
   }
 };
 
-// Clear demo courses so Admin starts with a fresh empty catalog
-fallbackStore.courses = [];
+// Helper to fetch paginated courses in chunks to bypass 32MB MongoDB memory capping on remote servers
+const fetchCoursesFromEndpoint = async (baseUrl) => {
+  const reqHeaders = { 'Accept': 'application/json, text/plain, */*' };
+  try {
+    let allCourses = [];
+    let page = 1;
+    const limit = 100;
+    let totalPages = 1;
+
+    while (page <= totalPages) {
+      const separator = baseUrl.includes('?') ? '&' : '?';
+      const url = `${baseUrl}${separator}limit=${limit}&all=true&page=${page}`;
+      const res = await axios.get(url, { timeout: 45000, headers: reqHeaders });
+      if (res.data?.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
+        allCourses = allCourses.concat(res.data.data);
+        const serverPages = res.data.pagination?.pages;
+        totalPages = serverPages ? serverPages : (res.data.data.length === limit ? page + 1 : page);
+        if (res.data.data.length < limit) break;
+        page++;
+      } else {
+        break;
+      }
+    }
+    return allCourses.length > 0 ? allCourses : null;
+  } catch (err) {
+    try {
+      let allCourses = [];
+      let page = 1;
+      const limit = 50;
+      let totalPages = 1;
+
+      while (page <= totalPages) {
+        const separator = baseUrl.includes('?') ? '&' : '?';
+        const url = `${baseUrl}${separator}limit=${limit}&all=true&page=${page}`;
+        const res = await axios.get(url, { timeout: 45000, headers: reqHeaders });
+        if (res.data?.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
+          allCourses = allCourses.concat(res.data.data);
+          const serverPages = res.data.pagination?.pages;
+          totalPages = serverPages ? serverPages : (res.data.data.length === limit ? page + 1 : page);
+          if (res.data.data.length < limit) break;
+          page++;
+        } else {
+          break;
+        }
+      }
+      return allCourses.length > 0 ? allCourses : null;
+    } catch (e2) {
+      return null;
+    }
+  }
+};
 
 // Cross-tab broadcast channel
 const coursesChannel = typeof window !== 'undefined' && 'BroadcastChannel' in window
@@ -671,11 +722,39 @@ const broadcastCoursesUpdate = (courses) => {
   }
 };
 
+const CD_COURSES_VERSION = '2026_v245';
+
 // Unified Synchronized Course Store Manager (Pure Direct MongoDB Atlas Cloud Sync & Local Persistence)
 export const getLiveCourses = () => {
+  const deletedIds = safeStorageRead('cd_deleted_course_ids', []);
+  const deletedSet = new Set(deletedIds.map(String));
+
+  const currentVersion = safeStorageRead('cd_courses_version', '');
   const custom = safeStorageRead('cd_custom_courses', []);
-  return custom
-    .filter(c => c && c.title && !String(c._id).startsWith('top-c'))
+
+  // Force upgrade if version mismatch or if cached custom list has fewer courses than full seed
+  if (currentVersion !== CD_COURSES_VERSION || !custom || custom.length < fallbackStore.courses.length) {
+    safeStorageWrite('cd_courses_version', CD_COURSES_VERSION);
+
+    const existingMap = new Map();
+    fallbackStore.courses.forEach(c => existingMap.set(String(c._id || c.slug), c));
+    if (Array.isArray(custom)) {
+      custom.forEach(c => {
+        if (c && (c._id || c.slug)) {
+          existingMap.set(String(c._id || c.slug), { ...existingMap.get(String(c._id || c.slug)), ...c });
+        }
+      });
+    }
+
+    const merged = Array.from(existingMap.values()).filter(
+      c => !deletedSet.has(String(c._id)) && !deletedSet.has(String(c.slug))
+    );
+    safeStorageWrite('cd_custom_courses', merged);
+    return merged;
+  }
+
+  const valid = custom
+    .filter(c => c && c.title && !String(c._id).startsWith('top-c') && !deletedSet.has(String(c._id)) && !deletedSet.has(String(c.slug)))
     .map(c => {
       const isDump = (txt) => txt && (txt.includes('2. Skills You Will Gain') || txt.includes('SYLLABUS:') || txt.length > 250);
       return {
@@ -685,41 +764,59 @@ export const getLiveCourses = () => {
         subtitle: (isDump(c.subtitle) || c.subtitle === c.description) ? '' : c.subtitle
       };
     });
+
+  if (valid && valid.length >= fallbackStore.courses.length) {
+    return valid;
+  }
+
+  const fallbackFiltered = fallbackStore.courses.filter(
+    c => !deletedSet.has(String(c._id)) && !deletedSet.has(String(c.slug))
+  );
+  safeStorageWrite('cd_custom_courses', fallbackFiltered);
+  return fallbackFiltered;
 };
 
 export const fetchLiveCoursesFromApi = async () => {
   let apiCourses = null;
-  try {
-    const res = await api.get('/courses?limit=1000');
-    if (res.data?.data && Array.isArray(res.data.data)) {
-      apiCourses = res.data.data;
-    }
-  } catch (err) {
-    try {
-      const fallbackRes = await axios.get('https://coursedivinewebsite.onrender.com/api/courses?limit=1000', { timeout: 8000 });
-      if (fallbackRes.data?.data && Array.isArray(fallbackRes.data.data)) {
-        apiCourses = fallbackRes.data.data;
-      }
-    } catch (e2) {}
+  
+  // 1. Try Direct Render Cloud API Endpoint (Primary Live MongoDB Backend)
+  apiCourses = await fetchCoursesFromEndpoint('https://coursedivinewebsite.onrender.com/api/courses');
+
+  // 2. Try Primary Same-Origin API Endpoint (/server/api/courses)
+  if (!apiCourses || apiCourses.length === 0) {
+    apiCourses = await fetchCoursesFromEndpoint(API_BASE_URL + '/courses');
   }
 
-  if (apiCourses && Array.isArray(apiCourses)) {
-    const deletedIds = safeStorageRead('cd_deleted_course_ids', []);
-    const liveList = apiCourses.filter((c) => {
-      if (!c || !c.title) return false;
-      const idStr = c._id ? String(c._id) : '';
-      const slugStr = c.slug ? String(c.slug) : '';
-      return !deletedIds.includes(idStr) && !deletedIds.includes(slugStr);
-    });
+  // 3. Try Relative /server/api/courses
+  if (!apiCourses || apiCourses.length === 0) {
+    apiCourses = await fetchCoursesFromEndpoint('/server/api/courses');
+  }
 
+  // 4. Try Relative /server/courses
+  if (!apiCourses || apiCourses.length === 0) {
+    apiCourses = await fetchCoursesFromEndpoint('/server/courses');
+  }
+
+  if (apiCourses && Array.isArray(apiCourses) && apiCourses.length > 0) {
+    const deletedIds = safeStorageRead('cd_deleted_course_ids', []);
+    const deletedSet = new Set(deletedIds.map(String));
+
+    const map = new Map();
+    for (const item of apiCourses) {
+      if (item && item.title && !deletedSet.has(String(item._id)) && !deletedSet.has(String(item.slug))) {
+        map.set(String(item._id || item.slug), {
+          ...item,
+          isPublished: item.isPublished !== undefined ? item.isPublished : true
+        });
+      }
+    }
+    const liveList = Array.from(map.values());
     safeStorageWrite('cd_custom_courses', liveList);
     broadcastCoursesUpdate(liveList);
     return liveList;
   }
 
-  const localList = getLiveCourses();
-  const deletedIds = safeStorageRead('cd_deleted_course_ids', []);
-  return localList.filter((c) => !deletedIds.includes(String(c._id)) && !deletedIds.includes(String(c.slug)));
+  return getLiveCourses();
 };
 
 export const getLiveCourseBySlug = (slug) => {
@@ -857,13 +954,24 @@ export const saveCourseLive = async (courseData) => {
 
 export const deleteCourseLive = async (courseId) => {
   const targetStr = String(courseId);
+
   const deletedIds = safeStorageRead('cd_deleted_course_ids', []);
   if (!deletedIds.includes(targetStr)) {
     deletedIds.push(targetStr);
-    safeStorageWrite('cd_deleted_course_ids', deletedIds);
   }
 
   const customCourses = safeStorageRead('cd_custom_courses', []);
+  const targetObj = customCourses.find(c => String(c._id) === targetStr || String(c.slug) === targetStr);
+  if (targetObj) {
+    if (targetObj.slug && !deletedIds.includes(String(targetObj.slug))) {
+      deletedIds.push(String(targetObj.slug));
+    }
+    if (targetObj._id && !deletedIds.includes(String(targetObj._id))) {
+      deletedIds.push(String(targetObj._id));
+    }
+  }
+  safeStorageWrite('cd_deleted_course_ids', deletedIds);
+
   const updatedCustom = customCourses.filter(c => String(c._id) !== targetStr && String(c.slug) !== targetStr);
   safeStorageWrite('cd_custom_courses', updatedCustom);
   broadcastCoursesUpdate(updatedCustom);

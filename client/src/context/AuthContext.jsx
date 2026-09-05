@@ -69,12 +69,13 @@ export const AuthProvider = ({ children }) => {
     try {
       let res;
       try {
-        res = await axios.post('https://coursedivinewebsite.onrender.com/api/auth/login', { email: cleanEmail, password });
+        res = await api.post('/auth/login', { email: cleanEmail, password });
       } catch (e1) {
         try {
-          res = await api.post('/auth/login', { email: cleanEmail, password });
+          res = await axios.post('https://coursedivinewebsite.onrender.com/api/auth/login', { email: cleanEmail, password });
         } catch (e2) {
           console.error('Login attempt failed:', e2);
+          throw e2;
         }
       }
 

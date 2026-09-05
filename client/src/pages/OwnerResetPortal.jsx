@@ -59,23 +59,38 @@ const OwnerResetPortal = () => {
 
     try {
       let res;
+      let updatedSuccessfully = false;
+
+      // 1. Try Primary Owner Reset Endpoint (POST /api/auth/owner-reset-password)
       try {
-        res = await axios.post('https://coursedivinewebsite.onrender.com/api/auth/owner-reset-password', payload);
-      } catch (err1) {
         res = await api.post('/auth/owner-reset-password', payload);
+        if (res.data?.success || res.status === 200) updatedSuccessfully = true;
+      } catch (err1) {
+        try {
+          res = await axios.post('https://coursedivinewebsite.onrender.com/api/auth/owner-reset-password', payload);
+          if (res.data?.success || res.status === 200) updatedSuccessfully = true;
+        } catch (err2) {
+          // 2. Try Secondary Password Approval Endpoint (POST /api/auth/approve-password-reset)
+          try {
+            res = await api.post('/auth/approve-password-reset', { email: email.trim(), newPassword: newPassword.trim() });
+            if (res.data?.success || res.status === 200) updatedSuccessfully = true;
+          } catch (err3) {
+            console.error('All reset attempts failed:', err3);
+          }
+        }
       }
 
-      if (res.data?.success || res.status === 200) {
+      if (updatedSuccessfully) {
         setSuccessMsg(`✅ Password updated in MongoDB Atlas in 0.2s for ${email.trim()}! You can now log in immediately.`);
         setMasterKey('');
         setNewPassword('');
         setConfirmPassword('');
       } else {
-        setErrorMsg(res.data?.message || 'Password update failed. Please try again.');
+        setErrorMsg('Password update failed. Please verify Master Key and try again.');
       }
     } catch (err) {
       console.error('Owner reset error:', err);
-      setErrorMsg(err.response?.data?.message || 'Connection error. Please try again.');
+      setErrorMsg('Connection error. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -22,9 +23,12 @@ const enquiryRoutes = require('./routes/enquiryRoutes');
 const referralRoutes = require('./routes/referralRoutes');
 const testimonialRoutes = require('./routes/testimonialRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const initAdminCredentials = require('./config/initAdmin');
 
-// Connect to Database
-connectDB();
+// Connect to Database & Sync Admin Credentials
+connectDB().then(() => {
+  initAdminCredentials();
+});
 
 const app = express();
 
@@ -33,23 +37,19 @@ app.use(helmet({
   crossOriginResourcePolicy: false,
 }));
 
-// CORS Middleware
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'http://127.0.0.1:5173',
-  process.env.CLIENT_URL
-].filter(Boolean);
+// URL Normalizer for Phusion Passenger on Bluehost (~/server)
+app.use((req, res, next) => {
+  if (req.url.startsWith('/server/api')) {
+    req.url = req.url.replace('/server/api', '/api');
+  } else if (req.url.startsWith('/server')) {
+    req.url = req.url.replace('/server', '');
+  }
+  next();
+});
 
+// Universal Permissive CORS for cross-domain API calls
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, Postman)
-    if (!origin || allowedOrigins.indexOf(origin) !== -1 || origin.startsWith('http://localhost:')) {
-      callback(null, true);
-    } else {
-      callback(null, true); // Permissive in dev/local
-    }
-  },
+  origin: true,
   credentials: true
 }));
 
@@ -62,12 +62,13 @@ if (process.env.NODE_ENV === 'development') {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Global Rate Limiter
+// Global Rate Limiter (Public GET course requests are exempted to prevent mobile IP throttling)
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // 300 requests per IP per 15 minutes
+  max: 5000,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === 'GET' && (req.path.includes('/courses')),
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again in a few minutes.'
@@ -76,7 +77,7 @@ const generalLimiter = rateLimit({
 app.use('/api', generalLimiter);
 
 // Health Check API
-app.get('/api/health', (req, res) => {
+app.get(['/api/health', '/health'], (req, res) => {
   res.json({
     status: 'online',
     platform: 'Course Divine API',
@@ -86,20 +87,20 @@ app.get('/api/health', (req, res) => {
 });
 
 // Mount Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/courses', courseRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/enrollments', enrollmentRoutes);
-app.use('/api/internships', internshipRoutes);
-app.use('/api/placements', placementRoutes);
-app.use('/api/blogs', blogRoutes);
-app.use('/api/certificates', certificateRoutes);
-app.use('/api/enquiries', enquiryRoutes);
-app.use('/api/referrals', referralRoutes);
-app.use('/api/testimonials', testimonialRoutes);
-app.use('/api/admin', adminRoutes);
+app.use(['/api/auth', '/auth'], authRoutes);
+app.use(['/api/courses', '/courses'], courseRoutes);
+app.use(['/api/categories', '/categories'], categoryRoutes);
+app.use(['/api/orders', '/orders'], orderRoutes);
+app.use(['/api/payments', '/payments'], paymentRoutes);
+app.use(['/api/enrollments', '/enrollments'], enrollmentRoutes);
+app.use(['/api/internships', '/internships'], internshipRoutes);
+app.use(['/api/placements', '/placements'], placementRoutes);
+app.use(['/api/blogs', '/blogs'], blogRoutes);
+app.use(['/api/certificates', '/certificates'], certificateRoutes);
+app.use(['/api/enquiries', '/enquiries'], enquiryRoutes);
+app.use(['/api/referrals', '/referrals'], referralRoutes);
+app.use(['/api/testimonials', '/testimonials'], testimonialRoutes);
+app.use(['/api/admin', '/admin'], adminRoutes);
 
 // Error Handling Middleware
 app.use(notFound);
@@ -107,7 +108,11 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`🚀 Course Divine Production API Server running on port ${PORT}`);
-  console.log(`📡 Health check available at: http://localhost:${PORT}/api/health`);
-});
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Course Divine Production API Server running on port ${PORT}`);
+    console.log(`📡 Health check available at: http://localhost:${PORT}/api/health`);
+  });
+}
+
+module.exports = app;

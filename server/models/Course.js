@@ -152,7 +152,11 @@ const courseSchema = new mongoose.Schema(
   { timestamps: true, strict: false }
 );
 
-// Indexes for fast searching
+// Indexes for fast searching and memory-efficient sorting across all 245+ courses
+courseSchema.index({ isPublished: 1, createdAt: -1 });
+courseSchema.index({ isPublished: 1, discountPrice: 1 });
+courseSchema.index({ category: 1 });
+courseSchema.index({ slug: 1 });
 courseSchema.index({ title: 'text', description: 'text', category: 'text' }, { default_language: 'none', language_override: 'none' });
 
 module.exports = mongoose.model('Course', courseSchema);
