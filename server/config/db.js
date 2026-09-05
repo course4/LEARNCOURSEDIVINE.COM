@@ -11,17 +11,33 @@ if (process.platform === 'win32') {
 const ATLAS_URI = 'mongodb+srv://info_db_user:8iTiFByhIMWvkPfx@cluster0.2be4pxm.mongodb.net/coursedivine';
 
 const connectDB = async () => {
+  const primaryUri = process.env.MONGODB_URI;
+  const options = {
+    serverSelectionTimeoutMS: 5000,
+    maxPoolSize: 10,
+    socketTimeoutMS: 45000
+  };
+
+  // Try primary URI if specified and different from ATLAS_URI
+  if (primaryUri && primaryUri !== ATLAS_URI) {
+    try {
+      console.log('🔄 Connecting to primary MONGODB_URI...');
+      const conn = await mongoose.connect(primaryUri, options);
+      console.log(`✅ MongoDB Atlas Connected (Primary): ${conn.connection.host}`);
+      return true;
+    } catch (error) {
+      console.warn(`⚠️ Primary MONGODB_URI connection failed (${error.message}). Trying fallback ATLAS_URI...`);
+    }
+  }
+
+  // Fallback to verified ATLAS_URI
   try {
-    const mongoUri = process.env.MONGODB_URI || ATLAS_URI;
-    const conn = await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 8000,
-      maxPoolSize: 10,
-      socketTimeoutMS: 45000
-    });
-    console.log(`✅ MongoDB Atlas Connected & Fully Active: ${conn.connection.host}`);
+    console.log('🔄 Connecting to fallback ATLAS_URI...');
+    const conn = await mongoose.connect(ATLAS_URI, options);
+    console.log(`✅ MongoDB Atlas Connected (Fallback): ${conn.connection.host}`);
     return true;
   } catch (error) {
-    console.warn(`⚠️ MongoDB Connection Error: ${error.message}`);
+    console.error(`❌ All MongoDB connection attempts failed: ${error.message}`);
     return false;
   }
 };

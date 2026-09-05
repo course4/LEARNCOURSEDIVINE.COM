@@ -18,6 +18,11 @@ const slugify = (text) => {
 // @access  Public
 const getCourses = async (req, res, next) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      const connectDB = require('../config/db');
+      await connectDB();
+    }
+
     const {
       search,
       category,
